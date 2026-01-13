@@ -52,15 +52,23 @@ The result is a probability distribution `P = [p₁, p₂, p₃, p₄, p₅]` ov
 
 ### Quick Start
 
-**Important**: This tool uses ES6 modules and requires a web server. You cannot open `index.html` directly.
+#### 🚀 Easiest: Standalone Version (No Server Required!)
 
-#### Option 1: Using the startup script (Easiest)
+Download `ssr-standalone.html` and open it directly in your browser - no server needed!
+
+This single-file version includes all code embedded and works with `file://` protocol.
+
+#### 💻 Development Version (Requires Server)
+
+**Important**: The modular version (`index.html` + `app.js`) requires a web server. You cannot open `index.html` directly.
+
+##### Option 1: Using the startup script
 ```bash
 ./start-server.sh
 ```
 Then open http://localhost:8080 in your browser.
 
-#### Option 2: Using Python
+##### Option 2: Using Python
 ```bash
 # Python 3
 python3 -m http.server 8080
@@ -70,7 +78,7 @@ python -m SimpleHTTPServer 8080
 ```
 Then open http://localhost:8080 in your browser.
 
-#### Option 3: Using Node.js
+##### Option 3: Using Node.js
 ```bash
 npx http-server -p 8080
 ```
@@ -260,9 +268,12 @@ This tool is designed to work with **any AI system**:
 ### File Structure
 ```
 .
+├── ssr-standalone.html # Standalone version (no server needed!)
 ├── index.html          # Main application interface
 ├── app.js             # SSR algorithm implementation
 ├── start-server.sh    # Convenient server startup script
+├── vercel.json        # Vercel deployment configuration
+├── package.json       # Project metadata
 └── README.md          # Documentation
 ```
 
