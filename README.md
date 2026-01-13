@@ -272,7 +272,6 @@ This tool is designed to work with **any AI system**:
 ├── index.html          # Main application interface
 ├── app.js             # SSR algorithm implementation
 ├── start-server.sh    # Convenient server startup script
-├── vercel.json        # Vercel deployment configuration
 ├── package.json       # Project metadata
 └── README.md          # Documentation
 ```
@@ -295,12 +294,33 @@ Then open http://localhost:8080 in your browser. No build process or npm depende
 
 ### Deployment
 
-Deploy to any static hosting service:
-- GitHub Pages
-- Netlify
-- Vercel
-- AWS S3 + CloudFront
-- Any web server
+#### GitHub Pages (Recommended)
+
+This is the simplest deployment method since your code is already on GitHub:
+
+1. Go to your repository settings
+2. Navigate to **Pages** (in the left sidebar)
+3. Under **Source**, select your branch: `claude/web-tool-ai-research-MYUhQ`
+4. Click **Save**
+5. Your site will be live at: `https://mishaal-cloud.github.io/fuzzy-chainsaw/`
+
+Both versions will work:
+- **Modular version**: `https://mishaal-cloud.github.io/fuzzy-chainsaw/` (uses index.html + app.js)
+- **Standalone version**: `https://mishaal-cloud.github.io/fuzzy-chainsaw/ssr-standalone.html`
+
+**Pros:**
+- ✅ Zero configuration needed
+- ✅ Free forever
+- ✅ Automatic HTTPS
+- ✅ Auto-deploys on every push
+- ✅ Fast global CDN
+
+#### Alternative Options
+
+- **Netlify Drop**: Drag and drop at [app.netlify.com/drop](https://app.netlify.com/drop) - live in 10 seconds
+- **Cloudflare Pages**: Fast global CDN with unlimited bandwidth
+- **Surge.sh**: `npm install -g surge && surge` - instant CLI deployment
+- **Any static web server**: Just serve the HTML files
 
 ## Contributing
 
