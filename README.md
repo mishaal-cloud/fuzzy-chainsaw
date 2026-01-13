@@ -52,7 +52,33 @@ The result is a probability distribution `P = [p₁, p₂, p₃, p₄, p₅]` ov
 
 ### Quick Start
 
-1. **Open the tool**: Simply open `index.html` in a modern web browser
+**Important**: This tool uses ES6 modules and requires a web server. You cannot open `index.html` directly.
+
+#### Option 1: Using the startup script (Easiest)
+```bash
+./start-server.sh
+```
+Then open http://localhost:8080 in your browser.
+
+#### Option 2: Using Python
+```bash
+# Python 3
+python3 -m http.server 8080
+
+# Or Python 2
+python -m SimpleHTTPServer 8080
+```
+Then open http://localhost:8080 in your browser.
+
+#### Option 3: Using Node.js
+```bash
+npx http-server -p 8080
+```
+Then open http://localhost:8080 in your browser.
+
+#### Using the Tool
+
+1. **Open http://localhost:8080** in a modern web browser
 2. **Enter your question** (optional): The question you asked the AI
 3. **Paste AI response**: Copy-paste the text response from any AI tool
 4. **Configure anchors**: Use default anchors or customize them for your use case
@@ -236,12 +262,25 @@ This tool is designed to work with **any AI system**:
 .
 ├── index.html          # Main application interface
 ├── app.js             # SSR algorithm implementation
+├── start-server.sh    # Convenient server startup script
 └── README.md          # Documentation
 ```
 
 ### Running Locally
 
-Simply open `index.html` in a web browser. No build process or dependencies required!
+The tool requires a web server (ES6 modules don't work with `file://` protocol).
+
+**Easiest method:**
+```bash
+./start-server.sh
+```
+
+**Alternative methods:**
+- Python: `python3 -m http.server 8080`
+- Node.js: `npx http-server -p 8080`
+- Any other static file server
+
+Then open http://localhost:8080 in your browser. No build process or npm dependencies required!
 
 ### Deployment
 
