@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Similarity Rating (SSR) Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title .number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .anchor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .anchor-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .anchor-input label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .anchor-input input {
+            padding: 10px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #results {
+            display: none;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #667eea;
+        }
+
+        #results.active {
+            display: block;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .results-header h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .distribution-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .distribution-table th,
+        .distribution-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .distribution-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .distribution-table tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .example-btn {
+            background: #764ba2;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Semantic Similarity Rating (SSR)</h1>
+            <p class="subtitle">Convert AI text responses to Likert scale ratings using semantic similarity</p>
+        </header>
+
+        <div class="info-box">
+            <h3>📚 What is SSR?</h3>
+            <p>
+                Semantic Similarity Rating (SSR) is a research-backed method from
+                <a href="https://arxiv.org/abs/2510.08338" target="_blank">arXiv:2510.08338</a>
+                that converts natural language responses into Likert scale ratings (1-5).
+                Instead of asking AI models for direct numerical ratings, SSR elicits textual responses
+                and maps them using semantic similarity to reference anchor statements, producing more
+                realistic and reliable rating distributions.
+            </p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                <span class="number">1</span>
+                <span>Enter Your Question/Prompt</span>
+            </div>
+            <label for="question">What question did you ask the AI? (Optional, for context)</label>
+            <textarea id="question" placeholder="Example: How likely are you to purchase this eco-friendly shampoo?"></textarea>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                <span class="number">2</span>
+                <span>Enter AI Response</span>
+            </div>
+            <label for="response">Paste the text response from any AI tool (ChatGPT, Claude, Gemini, etc.)</label>
+            <textarea id="response" placeholder="Example: I would definitely consider purchasing this product. The eco-friendly aspect is very appealing to me and aligns with my values. However, I would need to know more about the price point and whether it's available in my area before making a final decision."></textarea>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                <span class="number">3</span>
+                <span>Define Anchor Statements</span>
+            </div>
+            <p style="margin-bottom: 15px; color: #666;">
+                These anchor statements represent each point on the Likert scale. Customize them for your use case.
+            </p>
+            <div class="anchor-grid">
+                <div class="anchor-input">
+                    <label>1 - Strongly Disagree</label>
+                    <input type="text" id="anchor1" value="Strongly disagree, definitely not, absolutely no">
+                </div>
+                <div class="anchor-input">
+                    <label>2 - Disagree</label>
+                    <input type="text" id="anchor2" value="Disagree, probably not, unlikely">
+                </div>
+                <div class="anchor-input">
+                    <label>3 - Neutral</label>
+                    <input type="text" id="anchor3" value="Neutral, unsure, don't know, maybe">
+                </div>
+                <div class="anchor-input">
+                    <label>4 - Agree</label>
+                    <input type="text" id="anchor4" value="Agree, probably yes, likely, somewhat">
+                </div>
+                <div class="anchor-input">
+                    <label>5 - Strongly Agree</label>
+                    <input type="text" id="anchor5" value="Strongly agree, definitely yes, absolutely, very likely">
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button id="analyzeBtn">
+                <span>🔍</span>
+                <span>Analyze Response</span>
+            </button>
+            <button class="example-btn" id="exampleBtn">
+                Load Example
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Calculating semantic similarity...</p>
+            <p style="font-size: 0.9em; color: #999;">Loading embedding model (first time may take a moment)</p>
+        </div>
+
+        <div id="results">
+            <div class="results-header">
+                <h2>📊 Analysis Results</h2>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="distributionChart"></canvas>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Predicted Rating</div>
+                    <div class="value" id="predictedRating">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Confidence</div>
+                    <div class="value" id="confidence">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Mean Score</div>
+                    <div class="value" id="meanScore">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Std Deviation</div>
+                    <div class="value" id="stdDev">-</div>
+                </div>
+            </div>
+
+            <table class="distribution-table">
+                <thead>
+                    <tr>
+                        <th>Likert Rating</th>
+                        <th>Probability</th>
+                        <th>Similarity Score</th>
+                    </tr>
+                </thead>
+                <tbody id="distributionTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>
+                Based on research:
+                <a href="https://arxiv.org/abs/2510.08338" target="_blank">
+                    LLMs Reproduce Human Purchase Intent via Semantic Similarity Elicitation of Likert Ratings
+                </a>
+            </p>
+            <p style="margin-top: 10px;">
+                AI-agnostic tool - Works with responses from any AI system |
+                Embeddings powered by
+                <a href="https://huggingface.co/Xenova/all-MiniLM-L6-v2" target="_blank">Transformers.js</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
