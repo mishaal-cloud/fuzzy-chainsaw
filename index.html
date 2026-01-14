@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semantic Similarity Rating (SSR) Tool</title>
+    <title>SSR Survey Simulator - Synthetic Consumer Research Tool</title>
+    <meta name="description" content="Simulate realistic survey responses using AI. 90% accuracy, works with any AI tool, no signup required.">
+    <meta name="keywords" content="survey simulator, concept testing, market research, SSR, semantic similarity, Likert scale">
     <style>
         * {
             margin: 0;
@@ -21,7 +23,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -31,7 +33,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             border-bottom: 2px solid #667eea;
             padding-bottom: 20px;
         }
@@ -44,7 +46,23 @@
 
         .subtitle {
             color: #666;
-            font-size: 1.1em;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .warning-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning-banner strong {
+            color: #856404;
         }
 
         .info-box {
@@ -60,8 +78,21 @@
             margin-bottom: 10px;
         }
 
+        .info-box a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .info-box a:hover {
+            text-decoration: underline;
+        }
+
         .section {
             margin-bottom: 30px;
+            background: #f9fafb;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
         }
 
         .section-title {
@@ -76,13 +107,14 @@
         .section-title .number {
             background: #667eea;
             color: white;
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8em;
+            font-size: 1em;
+            font-weight: bold;
         }
 
         label {
@@ -92,7 +124,14 @@
             color: #555;
         }
 
-        textarea, input[type="text"] {
+        .helper-text {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        textarea, input[type="text"], input[type="number"], select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -102,7 +141,7 @@
             transition: border-color 0.3s;
         }
 
-        textarea:focus, input[type="text"]:focus {
+        textarea:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -112,11 +151,22 @@
             resize: vertical;
         }
 
+        .template-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .template-row select {
+            flex: 1;
+        }
+
         .anchor-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
-            margin-bottom: 15px;
+            margin-top: 15px;
         }
 
         .anchor-input {
@@ -133,6 +183,151 @@
             padding: 10px;
         }
 
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 1em;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .collapsible {
+            background: #e7ebf8;
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #667eea;
+            user-select: none;
+        }
+
+        .collapsible-header:hover {
+            background: #d6ddf3;
+        }
+
+        .collapsible-header .icon {
+            transition: transform 0.3s;
+        }
+
+        .collapsible.expanded .collapsible-header .icon {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible.expanded .collapsible-content {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .collapsible-inner {
+            padding: 20px;
+            background: white;
+        }
+
+        .persona-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .persona-control {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .persona-control label {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            margin-bottom: 0;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-group span {
+            min-width: 40px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .response-counter {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .response-counter.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         button {
             background: #667eea;
             color: white;
@@ -143,13 +338,13 @@
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 600;
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
-            margin: 0 auto;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background: #764ba2;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
@@ -161,38 +356,68 @@
             transform: none;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-            font-size: 1.1em;
+        .btn-secondary {
+            background: #764ba2;
         }
 
-        .loading.active {
+        .btn-small {
+            padding: 10px 20px;
+            font-size: 0.95em;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .progress-container.active {
             display: block;
         }
 
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
         }
 
         #results {
             display: none;
             margin-top: 40px;
             padding-top: 40px;
-            border-top: 2px solid #667eea;
+            border-top: 3px solid #667eea;
         }
 
         #results.active {
@@ -206,23 +431,37 @@
 
         .results-header h2 {
             color: #667eea;
-            font-size: 2em;
+            font-size: 2.2em;
             margin-bottom: 10px;
         }
 
+        .results-header .survey-info {
+            color: #666;
+            font-size: 1.1em;
+        }
+
         .chart-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto 30px;
-            padding: 20px;
+            padding: 30px;
             background: #f9fafb;
             border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .chart-title {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin-bottom: 30px;
         }
 
         .stat-card {
@@ -230,12 +469,21 @@
             padding: 20px;
             border-radius: 8px;
             text-align: center;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
         }
 
         .stat-card .label {
             color: #666;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .stat-card .value {
@@ -248,11 +496,15 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .distribution-table th,
         .distribution-table td {
-            padding: 12px;
+            padding: 15px;
             text-align: center;
             border: 1px solid #e0e0e0;
         }
@@ -267,13 +519,44 @@
             background: #f9fafb;
         }
 
+        .distribution-table tr:hover {
+            background: #f0f4ff;
+        }
+
+        .example-prompt {
+            background: #f9fafb;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .example-prompt strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .example-prompt code {
+            display: block;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
             text-align: center;
             color: #666;
-            font-size: 0.9em;
+            font-size: 0.95em;
         }
 
         .footer a {
@@ -285,159 +568,398 @@
             text-decoration: underline;
         }
 
-        .example-btn {
-            background: #764ba2;
-            padding: 10px 20px;
-            font-size: 0.9em;
-            margin-left: 10px;
+        .footer p {
+            margin-bottom: 10px;
         }
 
-        .btn-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .anchor-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Semantic Similarity Rating (SSR)</h1>
-            <p class="subtitle">Convert AI text responses to Likert scale ratings using semantic similarity</p>
+            <h1>🎯 Synthetic Consumer Survey Simulator</h1>
+            <p class="subtitle">Simulate realistic survey responses for ANY topic using SSR methodology</p>
         </header>
 
+        <div class="warning-banner">
+            <span>⚠️</span>
+            <div>
+                <strong>Demographic diversity is critical for 90% accuracy</strong> - Ensure your AI-generated responses include varied demographics (age, income, gender, location) as described in the research.
+            </div>
+        </div>
+
         <div class="info-box">
-            <h3>📚 What is SSR?</h3>
+            <h3>📚 What is SSR Survey Simulation?</h3>
             <p>
-                Semantic Similarity Rating (SSR) is a research-backed method from
-                <a href="https://arxiv.org/abs/2510.08338" target="_blank">arXiv:2510.08338</a>
-                that converts natural language responses into Likert scale ratings (1-5).
-                Instead of asking AI models for direct numerical ratings, SSR elicits textual responses
-                and maps them using semantic similarity to reference anchor statements, producing more
-                realistic and reliable rating distributions.
+                This tool implements the <strong>Semantic Similarity Rating (SSR)</strong> methodology from
+                <a href="https://arxiv.org/abs/2510.08338" target="_blank">research paper arXiv:2510.08338</a>.
+                Instead of analyzing single responses, it simulates realistic survey panels by aggregating 50-100+ synthetic consumer responses.
+                <strong>Achieves 90% of human test-retest reliability</strong> when demographics are varied.
+            </p>
+            <p style="margin-top: 10px;">
+                <strong>Use Case:</strong> Screen product concepts, test customer satisfaction, or evaluate survey questions
+                BEFORE conducting expensive human surveys. Works with any AI tool and any survey topic.
             </p>
         </div>
 
+        <!-- Step 1: Survey Question -->
         <div class="section">
             <div class="section-title">
                 <span class="number">1</span>
-                <span>Enter Your Question/Prompt</span>
+                <span>Survey Question</span>
             </div>
-            <label for="question">What question did you ask the AI? (Optional, for context)</label>
-            <textarea id="question" placeholder="Example: How likely are you to purchase this eco-friendly shampoo?"></textarea>
+            <label for="surveyQuestion">What question will you ask your synthetic consumers?</label>
+            <p class="helper-text">This tool is product-agnostic - works for products, services, policies, opinions, or any Likert-scale question.</p>
+            <textarea id="surveyQuestion" placeholder="Example: How likely are you to purchase this eco-friendly shampoo?"></textarea>
         </div>
 
+        <!-- Step 2: Anchor Statements -->
         <div class="section">
             <div class="section-title">
                 <span class="number">2</span>
-                <span>Enter AI Response</span>
+                <span>Anchor Statements (Likert Scale)</span>
             </div>
-            <label for="response">Paste the text response from any AI tool (ChatGPT, Claude, Gemini, etc.)</label>
-            <textarea id="response" placeholder="Example: I would definitely consider purchasing this product. The eco-friendly aspect is very appealing to me and aligns with my values. However, I would need to know more about the price point and whether it's available in my area before making a final decision."></textarea>
-        </div>
+            <p class="helper-text">Define what each rating level (1-5) represents. Use templates or customize for your use case.</p>
 
-        <div class="section">
-            <div class="section-title">
-                <span class="number">3</span>
-                <span>Define Anchor Statements</span>
+            <div class="template-row">
+                <select id="anchorTemplate">
+                    <option value="">Choose a template...</option>
+                    <option value="purchase">Purchase Intent</option>
+                    <option value="satisfaction">Customer Satisfaction</option>
+                    <option value="agreement">Agreement Scale</option>
+                    <option value="frequency">Frequency Scale</option>
+                    <option value="quality">Quality Perception</option>
+                </select>
+                <button class="btn-small btn-secondary" id="loadTemplateBtn">Load Template</button>
             </div>
-            <p style="margin-bottom: 15px; color: #666;">
-                These anchor statements represent each point on the Likert scale. Customize them for your use case.
-            </p>
+
             <div class="anchor-grid">
                 <div class="anchor-input">
-                    <label>1 - Strongly Disagree</label>
-                    <input type="text" id="anchor1" value="Strongly disagree, definitely not, absolutely no">
+                    <label>1 - Lowest</label>
+                    <input type="text" id="anchor1" value="Definitely not, absolutely no, would never buy">
                 </div>
                 <div class="anchor-input">
-                    <label>2 - Disagree</label>
-                    <input type="text" id="anchor2" value="Disagree, probably not, unlikely">
+                    <label>2 - Low</label>
+                    <input type="text" id="anchor2" value="Probably not, unlikely to purchase">
                 </div>
                 <div class="anchor-input">
                     <label>3 - Neutral</label>
-                    <input type="text" id="anchor3" value="Neutral, unsure, don't know, maybe">
+                    <input type="text" id="anchor3" value="Maybe, unsure, need more information">
                 </div>
                 <div class="anchor-input">
-                    <label>4 - Agree</label>
-                    <input type="text" id="anchor4" value="Agree, probably yes, likely, somewhat">
+                    <label>4 - High</label>
+                    <input type="text" id="anchor4" value="Probably yes, likely to purchase">
                 </div>
                 <div class="anchor-input">
-                    <label>5 - Strongly Agree</label>
-                    <input type="text" id="anchor5" value="Strongly agree, definitely yes, absolutely, very likely">
+                    <label>5 - Highest</label>
+                    <input type="text" id="anchor5" value="Definitely yes, absolutely would buy">
                 </div>
             </div>
         </div>
 
+        <!-- Step 3: Input Survey Responses -->
+        <div class="section">
+            <div class="section-title">
+                <span class="number">3</span>
+                <span>Input Survey Responses</span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="paste">Paste Responses</button>
+                <button class="tab" data-tab="csv">CSV with Demographics</button>
+            </div>
+
+            <!-- Paste Responses Tab -->
+            <div class="tab-content active" id="pasteTab">
+                <!-- Persona Generator (Collapsible) -->
+                <div class="collapsible" id="personaGenerator">
+                    <div class="collapsible-header">
+                        <span>🎭 Persona Prompt Generator (Click to Expand)</span>
+                        <span class="icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="collapsible-inner">
+                            <p class="helper-text" style="margin-bottom: 20px;">
+                                Generate persona prompts with varied demographics. Copy these prompts, use them with your preferred AI (ChatGPT, Claude, etc.),
+                                then paste the responses below.
+                            </p>
+
+                            <div class="persona-controls">
+                                <div class="persona-control">
+                                    <label>Number of Responses</label>
+                                    <input type="number" id="personaCount" value="50" min="10" max="200">
+                                </div>
+
+                                <div class="persona-control">
+                                    <label>Age Ranges</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" class="age-range" value="18-24" checked> 18-24</label>
+                                        <label><input type="checkbox" class="age-range" value="25-34" checked> 25-34</label>
+                                        <label><input type="checkbox" class="age-range" value="35-44" checked> 35-44</label>
+                                        <label><input type="checkbox" class="age-range" value="45-54" checked> 45-54</label>
+                                        <label><input type="checkbox" class="age-range" value="55-64" checked> 55-64</label>
+                                        <label><input type="checkbox" class="age-range" value="65+" checked> 65+</label>
+                                    </div>
+                                </div>
+
+                                <div class="persona-control">
+                                    <label>Income Levels</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" class="income-range" value="<$25k" checked> &lt;$25k</label>
+                                        <label><input type="checkbox" class="income-range" value="$25-50k" checked> $25-50k</label>
+                                        <label><input type="checkbox" class="income-range" value="$50-75k" checked> $50-75k</label>
+                                        <label><input type="checkbox" class="income-range" value="$75-100k" checked> $75-100k</label>
+                                        <label><input type="checkbox" class="income-range" value="$100k+" checked> $100k+</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="persona-controls">
+                                <div class="persona-control">
+                                    <label>Gender Distribution</label>
+                                    <div class="slider-group">
+                                        <span>Male</span>
+                                        <input type="range" id="malePercent" min="0" max="100" value="33">
+                                        <span id="malePercentValue">33%</span>
+                                    </div>
+                                    <div class="slider-group">
+                                        <span>Female</span>
+                                        <input type="range" id="femalePercent" min="0" max="100" value="34">
+                                        <span id="femalePercentValue">34%</span>
+                                    </div>
+                                    <div class="slider-group">
+                                        <span>Other</span>
+                                        <input type="range" id="otherPercent" min="0" max="100" value="33">
+                                        <span id="otherPercentValue">33%</span>
+                                    </div>
+                                </div>
+
+                                <div class="persona-control">
+                                    <label>Locations</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" class="location" value="Urban" checked> Urban</label>
+                                        <label><input type="checkbox" class="location" value="Suburban" checked> Suburban</label>
+                                        <label><input type="checkbox" class="location" value="Rural" checked> Rural</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="btn-container">
+                                <button id="generatePromptsBtn">Generate Persona Prompts</button>
+                                <button class="btn-secondary" id="copyPromptsBtn" disabled>Copy All Prompts</button>
+                            </div>
+
+                            <div id="generatedPrompts" style="display: none; margin-top: 20px;">
+                                <label>Generated Prompts (50 total - showing first 5)</label>
+                                <textarea id="promptsDisplay" readonly style="min-height: 200px; font-family: monospace; font-size: 0.85em;"></textarea>
+                                <p class="helper-text" style="margin-top: 10px;">
+                                    💡 Copy these prompts, use them with your preferred AI, then paste all responses in the field below.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Example Prompt Template -->
+                <div class="example-prompt">
+                    <strong>Example Persona Prompt Template:</strong>
+                    <code>You are a 28-year-old female from California (suburban area) with a household income of $65,000.
+
+[Your Survey Question Here]
+
+Please provide your honest opinion.</code>
+                    <p style="margin-top: 10px; color: #666;">
+                        Generate 50-100 responses with varied demographics for realistic survey distributions.
+                    </p>
+                </div>
+
+                <label for="responsesInput">Paste AI-generated responses (one per line, 50-100 recommended)</label>
+                <textarea id="responsesInput" placeholder="Paste multiple responses here, one per line...
+
+Example responses:
+I would definitely purchase this product. The eco-friendly aspect is very appealing...
+I'm not interested. The price seems too high for what it offers...
+Maybe, I need to see more reviews first. It looks interesting but I'm unsure..."
+                    style="min-height: 250px;"></textarea>
+
+                <div id="responseCounter" class="response-counter" style="display: none;">
+                    <span>✓</span>
+                    <span id="counterText">0 responses detected</span>
+                </div>
+            </div>
+
+            <!-- CSV Tab -->
+            <div class="tab-content" id="csvTab">
+                <p class="helper-text" style="margin-bottom: 15px;">
+                    Upload or paste CSV data with demographics for advanced segmentation analysis.
+                </p>
+
+                <div class="example-prompt">
+                    <strong>CSV Format (with headers):</strong>
+                    <code>response,age,income,gender,location
+"I would definitely buy this...",28,65000,Female,Urban
+"Not interested because...",52,45000,Male,Rural</code>
+                </div>
+
+                <label for="csvInput">Paste CSV data here</label>
+                <textarea id="csvInput" placeholder="response,age,income,gender,location
+&quot;I would definitely purchase...&quot;,28,65000,Female,Urban
+&quot;Not interested in this...&quot;,52,45000,Male,Rural"
+                    style="min-height: 200px; font-family: monospace;"></textarea>
+
+                <div id="csvCounter" class="response-counter" style="display: none;">
+                    <span>✓</span>
+                    <span id="csvCounterText">0 responses detected</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analyze Button -->
         <div class="btn-container">
-            <button id="analyzeBtn">
+            <button id="analyzeSurveyBtn">
                 <span>🔍</span>
-                <span>Analyze Response</span>
+                <span>Analyze Survey</span>
             </button>
-            <button class="example-btn" id="exampleBtn">
-                Load Example
+            <button class="btn-secondary" id="loadExampleBtn">
+                Load Example (50 responses)
             </button>
         </div>
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Calculating semantic similarity...</p>
-            <p style="font-size: 0.9em; color: #999;">Loading embedding model (first time may take a moment)</p>
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="progress-text" id="progressText">Processing response 0/0...</div>
         </div>
 
+        <!-- Results Section -->
         <div id="results">
             <div class="results-header">
-                <h2>📊 Analysis Results</h2>
+                <h2>📊 Survey Results</h2>
+                <p class="survey-info" id="surveyInfo">Survey of <span id="totalResponses">0</span> Respondents</p>
             </div>
 
+            <!-- Aggregate Distribution Chart -->
             <div class="chart-container">
+                <div class="chart-title">Aggregate Likert Distribution</div>
                 <canvas id="distributionChart"></canvas>
             </div>
 
+            <!-- Statistics Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="label">Predicted Rating</div>
-                    <div class="value" id="predictedRating">-</div>
+                    <div class="label">Survey Mean</div>
+                    <div class="value" id="surveyMean">-</div>
                 </div>
                 <div class="stat-card">
-                    <div class="label">Confidence</div>
-                    <div class="value" id="confidence">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Mean Score</div>
-                    <div class="value" id="meanScore">-</div>
+                    <div class="label">Mode (Most Common)</div>
+                    <div class="value" id="surveyMode">-</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Std Deviation</div>
-                    <div class="value" id="stdDev">-</div>
+                    <div class="value" id="surveyStdDev">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Responses</div>
+                    <div class="value" id="surveyTotal">-</div>
                 </div>
             </div>
 
+            <!-- Distribution Table -->
             <table class="distribution-table">
                 <thead>
                     <tr>
-                        <th>Likert Rating</th>
-                        <th>Probability</th>
-                        <th>Similarity Score</th>
+                        <th>Likert Level</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                        <th>Cumulative %</th>
                     </tr>
                 </thead>
                 <tbody id="distributionTableBody">
                 </tbody>
             </table>
+
+            <!-- Demographic Breakdowns (if available) -->
+            <div class="collapsible" id="demographicSection" style="display: none; margin-top: 30px;">
+                <div class="collapsible-header">
+                    <span>📈 Demographic Breakdowns (Click to Expand)</span>
+                    <span class="icon">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-inner">
+                        <p class="helper-text">Demographic segmentation analysis will appear here when CSV with demographics is provided.</p>
+                        <div id="demographicCharts"></div>
+                        <div id="demographicInsights"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Individual Responses (optional) -->
+            <div class="collapsible" id="individualSection" style="margin-top: 30px;">
+                <div class="collapsible-header">
+                    <span>📋 Individual Response Distributions (Click to Expand)</span>
+                    <span class="icon">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="collapsible-inner">
+                        <p class="helper-text">First 10 individual response distributions shown. The aggregate above is the primary output.</p>
+                        <div id="individualDistributions"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Button -->
+            <div class="btn-container" style="margin-top: 30px;">
+                <button class="btn-secondary" id="exportBtn">
+                    <span>📥</span>
+                    <span>Export Results as CSV</span>
+                </button>
+            </div>
         </div>
 
         <div class="footer">
             <p>
-                Based on research:
+                <strong>Based on research:</strong>
                 <a href="https://arxiv.org/abs/2510.08338" target="_blank">
-                    LLMs Reproduce Human Purchase Intent via Semantic Similarity Elicitation of Likert Ratings
+                    "LLMs Reproduce Human Purchase Intent via Semantic Similarity Elicitation of Likert Ratings"
                 </a>
+                (arXiv:2510.08338)
             </p>
-            <p style="margin-top: 10px;">
-                AI-agnostic tool - Works with responses from any AI system |
-                Embeddings powered by
-                <a href="https://huggingface.co/Xenova/all-MiniLM-L6-v2" target="_blank">Transformers.js</a>
+            <p>
+                ✓ 90% of human test-retest reliability | ✓ Tested on 9,300 real survey responses | ✓ Published methodology
+            </p>
+            <p style="margin-top: 15px;">
+                🔒 <strong>Privacy First:</strong> All processing happens locally in your browser | No data sent to servers | No tracking
+            </p>
+            <p>
+                AI-agnostic tool - Works with responses from ChatGPT, Claude, Gemini, or any AI system |
+                Embeddings powered by <a href="https://huggingface.co/Xenova/all-MiniLM-L6-v2" target="_blank">Transformers.js</a>
+            </p>
+            <p style="margin-top: 15px;">
+                🔓 <a href="https://github.com/mishaal-cloud/fuzzy-chainsaw" target="_blank">Open Source on GitHub</a> |
+                <a href="https://arxiv.org/pdf/2510.08338" target="_blank">Read the Paper</a>
             </p>
         </div>
     </div>
