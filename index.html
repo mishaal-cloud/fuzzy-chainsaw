@@ -623,6 +623,25 @@
             </p>
         </div>
 
+        <div class="info-box" style="background: #f0fdf4; border-left-color: #10b981;">
+            <h3>🎯 How 90% Accuracy is Achieved</h3>
+            <p style="margin-bottom: 10px;">
+                The tool helps you simulate realistic surveys through a 4-step process:
+            </p>
+            <ol style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Create persona prompts</strong> with demographic/professional context (this tool generates these)</li>
+                <li><strong>Use ChatGPT/Claude/Gemini</strong> to generate responses (modern LLMs reproduce human response patterns from training data)</li>
+                <li><strong>Tool converts text → Likert ratings</strong> via SSR algorithm (more reliable than asking LLMs for direct 1-5 ratings)</li>
+                <li><strong>Tool aggregates 50-100 responses</strong> → realistic survey distribution (law of large numbers smooths individual variations)</li>
+            </ol>
+            <p style="margin-top: 15px; padding: 10px; background: white; border-radius: 4px;">
+                <strong>KEY:</strong> The synthetic data quality depends on:<br>
+                ✓ Using GPT-4 / Claude 3.5 Sonnet (not older models)<br>
+                ✓ Diverse demographics/personas (6+ different profiles)<br>
+                ✓ Sufficient sample size (50+ responses)
+            </p>
+        </div>
+
         <!-- Step 1: Survey Question -->
         <div class="section">
             <div class="section-title">
@@ -685,6 +704,19 @@
                 <span>Input Survey Responses</span>
             </div>
 
+            <!-- Survey Type Selector (B2C vs B2B) -->
+            <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border: 2px solid #667eea; border-radius: 6px;">
+                <label style="font-weight: 600; margin-right: 20px; color: #667eea;">Survey Type:</label>
+                <label style="margin-right: 25px; cursor: pointer;">
+                    <input type="radio" name="surveyMode" value="b2c" checked style="margin-right: 5px;">
+                    <strong>Consumer (B2C)</strong> - Age, income, gender, location
+                </label>
+                <label style="cursor: pointer;">
+                    <input type="radio" name="surveyMode" value="b2b" style="margin-right: 5px;">
+                    <strong>Professional (B2B)</strong> - Job roles, responsibilities, pain points
+                </label>
+            </div>
+
             <div class="tabs">
                 <button class="tab active" data-tab="paste">Paste Responses</button>
                 <button class="tab" data-tab="csv">CSV with Demographics</button>
@@ -692,7 +724,56 @@
 
             <!-- Paste Responses Tab -->
             <div class="tab-content active" id="pasteTab">
-                <!-- Persona Generator (Collapsible) -->
+                <!-- B2B Persona Input (Hidden by default) -->
+                <div id="b2bPersonaSection" class="collapsible" style="display: none;">
+                    <div class="collapsible-header">
+                        <span>📋 Define B2B Personas (Copy from Excel/Word)</span>
+                        <span class="icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="collapsible-inner">
+                            <p class="helper-text" style="margin-bottom: 15px;">
+                                Copy your persona table from Excel or Word and paste below.
+                                <strong>Required column:</strong> "role" or "persona" (other columns optional: department, responsibilities, pain_points, key_needs, etc.).
+                            </p>
+
+                            <div class="example-prompt">
+                                <strong>Excel/Word Table Format (tab-separated):</strong>
+                                <code style="font-size: 0.85em;">Persona (Functional Team)	Role / Typical Responsibility	Key Needs / Objectives	Pain-Points / Challenges
+Operations Team	Manage staffing & resource allocation	Stable operations, compliance	Poor visibility on qualifications
+L&D Team	Manage training programs	Ensure workforce competency	Scattered training records
+IT Team	Manage technical integration	Secure systems, scalable support	Data silos, integration complexity</code>
+                            </div>
+
+                            <label for="personaDefinitionsInput">Paste persona table (auto-detects tab or comma separation):</label>
+                            <textarea id="personaDefinitionsInput"
+                                      placeholder="Paste from Excel/Word...
+
+Example format:
+role	department	responsibilities	pain_points
+Operations Manager	Operations	Staffing & resource allocation	Poor visibility on qualifications
+L&D Manager	Training	Manage certifications	Scattered training records"
+                                      style="min-height: 180px; font-family: monospace; font-size: 0.9em;"></textarea>
+
+                            <div id="personaCounter" class="response-counter" style="display: none;">
+                                <span>✓</span>
+                                <span id="personaCountText">0 personas detected</span>
+                            </div>
+
+                            <div class="btn-container" style="margin-top: 15px;">
+                                <button id="generateB2BPromptsBtn" class="btn-secondary">
+                                    Generate Prompts from Personas
+                                </button>
+                            </div>
+
+                            <p class="helper-text" style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+                                💡 <strong>Tip:</strong> The tool will generate ~8-9 response prompts per persona (varying seniority and company size) for a total of 50 prompts.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B2C Persona Generator (Collapsible) -->
                 <div class="collapsible" id="personaGenerator">
                     <div class="collapsible-header">
                         <span>🎭 Persona Prompt Generator (Click to Expand)</span>

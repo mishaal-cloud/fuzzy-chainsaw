@@ -229,6 +229,112 @@ async function copyPersonaPromptsToClipboard(prompts) {
 }
 
 // ============================================
+// B2B PERSONA SUPPORT (TIER 2.5)
+// ============================================
+
+// Auto-detect delimiter (tab vs comma) for Excel/Word paste support
+function detectDelimiter(text) {
+    const firstLine = text.split('\n')[0];
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+
+    // If more tabs than commas, it's TSV (Excel/Word copy-paste)
+    return tabCount > commaCount ? '\t' : ',';
+}
+
+// Parse B2B persona definitions from pasted table
+function parsePersonaDefinitions(text) {
+    const delimiter = detectDelimiter(text);
+    const lines = text.trim().split('\n');
+
+    if (lines.length < 2) {
+        throw new Error('Need header row + at least one persona');
+    }
+
+    const header = parseCSVLine(lines[0], delimiter);
+
+    // Flexible column matching - find "role" column (case-insensitive)
+    const roleColIdx = header.findIndex(h =>
+        /role|persona|title|position|functional.?team/i.test(h)
+    );
+
+    if (roleColIdx === -1) {
+        throw new Error('Table must have "role", "persona", or "title" column');
+    }
+
+    const personas = [];
+    for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], delimiter);
+        if (values.length === 0 || !values[roleColIdx]) continue;
+
+        const persona = {};
+        header.forEach((col, idx) => {
+            // Normalize column names to snake_case
+            const key = col.toLowerCase().replace(/[\s\/\(\)]+/g, '_').replace(/_+/g, '_');
+            persona[key] = values[idx] || '';
+        });
+        personas.push(persona);
+    }
+
+    return personas;
+}
+
+// Generate B2B survey prompts from persona definitions
+function generateB2BPrompts(personas, surveyQuestion, totalResponses = 50) {
+    const prompts = [];
+    const responsesPerPersona = Math.ceil(totalResponses / personas.length);
+
+    personas.forEach((persona, pIdx) => {
+        // Extract fields with flexible column name matching
+        const role = persona.role || persona.persona || persona.title ||
+                     persona.persona_functional_team || `Persona ${pIdx + 1}`;
+
+        const dept = persona.department || persona.team || persona.functional_team || '';
+
+        const resp = persona.responsibilities || persona.role_typical_responsibility ||
+                     persona.role___typical_responsibility || '';
+
+        const pain = persona.pain_points || persona.pain_points_challenges ||
+                     persona.challenges || persona.pain_points___challenges || '';
+
+        const needs = persona.key_needs || persona.key_needs_objectives ||
+                      persona.objectives || persona.key_needs___objectives || '';
+
+        // Generate variations per persona (different seniority, company size)
+        for (let v = 0; v < responsesPerPersona; v++) {
+            const seniority = ['Junior', 'Mid-Level', 'Senior', 'Lead'][v % 4];
+            const companySize = [
+                'small (10-50 employees)',
+                'medium (100-500 employees)',
+                'large (1000-5000 employees)',
+                'enterprise (10,000+ employees)'
+            ][Math.floor(v / 4) % 4];
+
+            let prompt = `You are a ${seniority} ${role}`;
+            if (dept) prompt += ` in the ${dept} department`;
+            prompt += ` at a ${companySize} organization.\n\n`;
+
+            if (resp) prompt += `Your key responsibilities include: ${resp}\n\n`;
+            if (needs) prompt += `Your main objectives are: ${needs}\n\n`;
+            if (pain) prompt += `Challenges you face: ${pain}\n\n`;
+
+            prompt += `${surveyQuestion}\n\nPlease respond naturally based on your professional perspective and experience.`;
+
+            prompts.push({
+                index: prompts.length + 1,
+                persona: role,
+                department: dept,
+                seniority: seniority,
+                companySize: companySize,
+                prompt: prompt.trim()
+            });
+        }
+    });
+
+    return prompts;
+}
+
+// ============================================
 // CSV PARSER & DEMOGRAPHICS (TIER 3)
 // ============================================
 
@@ -274,8 +380,8 @@ function parseCSV(csvText) {
     return { responses, demographics, hasDemographics: header.some(h => optionalColumns.includes(h)) };
 }
 
-// Parse single CSV line (handles quotes)
-function parseCSVLine(line) {
+// Parse single CSV line (handles quotes, supports custom delimiter for TSV)
+function parseCSVLine(line, delimiter = ',') {
     const result = [];
     let current = '';
     let inQuotes = false;
@@ -285,7 +391,7 @@ function parseCSVLine(line) {
 
         if (char === '"') {
             inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === delimiter && !inQuotes) {
             result.push(current.trim());
             current = '';
         } else {
@@ -958,7 +1064,85 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load example button
     document.getElementById('loadExampleBtn')?.addEventListener('click', loadExampleSurvey);
 
+    // ============================================
+    // B2B PERSONA MODE EVENT HANDLERS
+    // ============================================
+
+    // Survey mode toggle (B2C vs B2B)
+    document.querySelectorAll('input[name="surveyMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const isB2B = e.target.value === 'b2b';
+            const b2bSection = document.getElementById('b2bPersonaSection');
+            const b2cSection = document.getElementById('personaGenerator');
+
+            if (b2bSection) b2bSection.style.display = isB2B ? 'block' : 'none';
+            if (b2cSection) b2cSection.style.display = isB2B ? 'none' : 'block';
+        });
+    });
+
+    // Live persona counter for B2B mode
+    document.getElementById('personaDefinitionsInput')?.addEventListener('input', (e) => {
+        try {
+            const personas = parsePersonaDefinitions(e.target.value);
+            const counter = document.getElementById('personaCounter');
+            const text = document.getElementById('personaCountText');
+
+            if (personas.length > 0 && counter && text) {
+                counter.style.display = 'flex';
+                counter.classList.remove('warning');
+                text.textContent = `${personas.length} persona${personas.length > 1 ? 's' : ''} detected`;
+            } else if (counter) {
+                counter.style.display = 'none';
+            }
+        } catch (err) {
+            const counter = document.getElementById('personaCounter');
+            if (counter) counter.style.display = 'none';
+        }
+    });
+
+    // Generate B2B prompts button
+    document.getElementById('generateB2BPromptsBtn')?.addEventListener('click', () => {
+        const personaText = document.getElementById('personaDefinitionsInput')?.value;
+        const surveyQ = document.getElementById('surveyQuestion')?.value || '[Your Survey Question]';
+
+        if (!personaText || personaText.trim().length === 0) {
+            alert('Please paste your persona table first.');
+            return;
+        }
+
+        try {
+            const personas = parsePersonaDefinitions(personaText);
+            const prompts = generateB2BPrompts(personas, surveyQ, 50);
+
+            // Display in existing prompts area (reuse B2C display section)
+            const display = document.getElementById('promptsDisplay');
+            if (display) {
+                const preview = prompts.slice(0, 5).map(p => p.prompt).join('\n\n---\n\n');
+                display.value = preview + `\n\n... (${prompts.length - 5} more prompts)\n\n[Click "Copy All Prompts" to copy all ${prompts.length} prompts]`;
+            }
+
+            // Store for copying
+            window.generatedPersonaPrompts = prompts.map(p => p.prompt);
+
+            // Show the generated prompts section
+            document.getElementById('generatedPrompts').style.display = 'block';
+            document.getElementById('copyPromptsBtn').disabled = false;
+
+            // Scroll to prompts
+            setTimeout(() => {
+                document.getElementById('generatedPrompts')?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+            }, 100);
+
+        } catch (error) {
+            alert(`Error parsing persona table: ${error.message}\n\nMake sure your table has a "role" or "persona" column.`);
+        }
+    });
+
     console.log('SSR Survey Simulator loaded!');
     console.log('Ready to analyze batch responses and generate survey distributions.');
     console.log('All three tiers available: Simple paste, Persona generator, CSV with demographics');
+    console.log('B2B persona support: Copy/paste from Excel/Word tables');
 });
