@@ -1,0 +1,25 @@
+# Google Ads API Credentials
+config/google-ads.yaml
+config/*.json
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Reports
+reports/*.csv
+reports/*.xlsx
+reports/*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
