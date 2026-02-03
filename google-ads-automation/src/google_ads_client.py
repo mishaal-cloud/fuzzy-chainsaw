@@ -4,6 +4,7 @@ Handles authentication and provides easy access to Google Ads API
 """
 
 import os
+from pathlib import Path
 from typing import Optional
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -13,23 +14,36 @@ from dotenv import load_dotenv
 class GoogleAdsAPIClient:
     """Wrapper for Google Ads API client with helper methods"""
 
-    def __init__(self, config_path: str = "config/google-ads.yaml"):
+    def __init__(self, config_path: str = None):
         """
         Initialize the Google Ads API client
 
         Args:
             config_path: Path to the google-ads.yaml configuration file
+                        If not provided, auto-detects the project root
         """
-        load_dotenv()
+        # Auto-detect project root
+        if config_path is None:
+            # Find the google-ads-automation directory
+            current_file = Path(__file__).resolve()
+            project_root = current_file.parent.parent  # google-ads-automation/src/file.py -> google-ads-automation/
+            config_path = project_root / "config" / "google-ads.yaml"
+            env_path = project_root / ".env"
 
-        if not os.path.exists(config_path):
+            # Load .env from project root
+            load_dotenv(dotenv_path=env_path)
+        else:
+            load_dotenv()
+            config_path = Path(config_path)
+
+        if not config_path.exists():
             raise FileNotFoundError(
                 f"Configuration file not found: {config_path}\n"
-                "Please copy google-ads.yaml.template to google-ads.yaml "
-                "and fill in your credentials."
+                f"Expected location: {config_path.parent.parent}/config/google-ads.yaml\n"
+                "Run setup.py to create configuration files."
             )
 
-        self.client = GoogleAdsClient.load_from_storage(config_path)
+        self.client = GoogleAdsClient.load_from_storage(str(config_path))
         self.customer_id = os.getenv("GOOGLE_ADS_CUSTOMER_ID")
 
         if not self.customer_id:
