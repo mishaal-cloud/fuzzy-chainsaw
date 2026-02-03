@@ -38,18 +38,21 @@ class GoogleAdsAPIClient:
                 "Please set it in your .env file."
             )
 
-    def get_service(self, service_name: str, version: str = "v17"):
+    def get_service(self, service_name: str, version: str = None):
         """
         Get a Google Ads API service
 
         Args:
             service_name: Name of the service (e.g., 'GoogleAdsService')
-            version: API version (default: v17)
+            version: API version (default: None, uses latest)
 
         Returns:
             Service object
         """
-        return self.client.get_service(service_name, version=version)
+        if version:
+            return self.client.get_service(service_name, version=version)
+        else:
+            return self.client.get_service(service_name)
 
     def execute_query(self, query: str, customer_id: Optional[str] = None):
         """
