@@ -23,8 +23,11 @@ ENV PORT=8080
 
 EXPOSE ${PORT}
 
+# Default: run the web app. Override with DD_APP=api for the API server.
+ENV DD_APP=webapp
+
 # Use exec form so signals propagate correctly
-CMD uvicorn due_diligence.api.server:app \
+CMD uvicorn due_diligence.${DD_APP}.app:app \
     --host 0.0.0.0 \
     --port ${PORT} \
     --workers 1 \

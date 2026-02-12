@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ── AI Due Diligence API — Google Cloud Run Deployment ──────────────
+# ── AI Due Diligence — Google Cloud Run Deployment ──────────────────
 #
 # Prerequisites:
 #   1. gcloud CLI installed and authenticated
@@ -38,7 +38,7 @@ if [[ -z "$PROJECT_ID" ]]; then
 fi
 
 echo "═══════════════════════════════════════════════════════"
-echo "  AI Due Diligence API — Cloud Run Deployment"
+echo "  AI Due Diligence — Cloud Run Deployment"
 echo "═══════════════════════════════════════════════════════"
 echo "  Project:  $PROJECT_ID"
 echo "  Region:   $REGION"
@@ -121,9 +121,9 @@ gcloud run deploy "$SERVICE_NAME" \
     --project="$PROJECT_ID" \
     --platform=managed \
     --allow-unauthenticated \
-    --set-secrets="ANTHROPIC_API_KEY=anthropic-api-key:latest,ADMIN_SECRET=admin-secret:latest" \
-    --memory=1Gi \
-    --cpu=1 \
+    --set-secrets="ANTHROPIC_API_KEY=anthropic-api-key:latest" \
+    --memory=2Gi \
+    --cpu=2 \
     --timeout=600 \
     --concurrency=10 \
     --min-instances=1 \
@@ -143,21 +143,7 @@ echo "════════════════════════�
 echo "  Deployment complete!"
 echo "═══════════════════════════════════════════════════════"
 echo
-echo "  Service URL:  $SERVICE_URL"
-echo "  Swagger docs: ${SERVICE_URL}/docs"
-echo "  Health check: ${SERVICE_URL}/api/v1/health"
+echo "  Web App:  $SERVICE_URL"
 echo
-echo "  Next steps:"
-echo "    1. Create an API key:"
-echo "       curl -X POST ${SERVICE_URL}/admin/create-key \\"
-echo "         -H 'X-Admin-Secret: <your-admin-secret>' \\"
-echo "         -H 'Content-Type: application/json' \\"
-echo "         -d '{\"name\": \"My First Key\", \"tier\": \"pro\"}'"
-echo
-echo "    2. Test it:"
-echo "       curl ${SERVICE_URL}/api/v1/health"
-echo
-echo "    3. Update chatgpt_openapi.yaml with your service URL:"
-echo "       servers:"
-echo "         - url: ${SERVICE_URL}"
+echo "  Open the URL above in your browser and enter a company URL to analyze."
 echo
