@@ -1,0 +1,173 @@
+openapi: "3.1.0"
+info:
+  title: AI Due Diligence
+  description: |
+    Run comprehensive AI-powered due diligence on any startup or company.
+    Submit a company for analysis and receive a professional investor memo,
+    financial projections, risk assessment, and visual report.
+  version: "1.0.0"
+servers:
+  - url: https://your-api-domain.com
+    description: Production API
+paths:
+  /api/v1/analyze:
+    post:
+      operationId: submitAnalysis
+      summary: Submit a company for due diligence analysis
+      description: |
+        Starts a 7-stage AI analysis pipeline that researches the company,
+        analyzes the market, builds financial models, assesses risks,
+        and generates professional investment reports. Takes 3-7 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: "The analysis query, e.g. 'Analyze Stripe for a growth-stage investment'"
+                  minLength: 10
+                  maxLength: 1000
+      responses:
+        "202":
+          description: Analysis queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Analysis ID for polling
+                  status:
+                    type: string
+                  message:
+                    type: string
+                  poll_url:
+                    type: string
+        "402":
+          description: No credits remaining
+
+  /api/v1/analyses/{analysis_id}:
+    get:
+      operationId: getAnalysisStatus
+      summary: Check analysis progress
+      description: Poll this endpoint to check if the analysis is complete.
+      parameters:
+        - name: analysis_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Analysis status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  query:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, running, completed, failed]
+                  current_stage:
+                    type: integer
+                    description: "Current stage (0-7)"
+                  stage_name:
+                    type: string
+                  error:
+                    type: string
+
+  /api/v1/analyses/{analysis_id}/results:
+    get:
+      operationId: getAnalysisResults
+      summary: Get completed analysis results
+      description: |
+        Returns the full analysis results including investor memo,
+        HTML report, and infographic. Only available after status is 'completed'.
+      parameters:
+        - name: analysis_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Full analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  query:
+                    type: string
+                  memo:
+                    type: string
+                    description: Markdown investor memo
+                  report:
+                    type: string
+                    description: HTML investment report
+                  infographic:
+                    type: string
+                    description: HTML infographic
+                  summary:
+                    type: string
+                    description: JSON summary data
+                  elapsed_seconds:
+                    type: number
+        "425":
+          description: Analysis not yet complete
+
+  /api/v1/analyses:
+    get:
+      operationId: listAnalyses
+      summary: List recent analyses
+      responses:
+        "200":
+          description: List of analyses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    query:
+                      type: string
+                    status:
+                      type: string
+                    current_stage:
+                      type: integer
+                    created_at:
+                      type: string
+
+  /api/v1/credits:
+    get:
+      operationId: getCredits
+      summary: Check remaining analysis credits
+      responses:
+        "200":
+          description: Credit information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tier:
+                    type: string
+                  credits_remaining:
+                    type: integer
+                  name:
+                    type: string
