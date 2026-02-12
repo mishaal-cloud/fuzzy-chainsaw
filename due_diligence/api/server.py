@@ -4,14 +4,16 @@ Run with:
     uvicorn due_diligence.api.server:app --host 0.0.0.0 --port 8000
 """
 
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from due_diligence.api.database import (
     init_db,
+    create_api_key,
     create_analysis,
     get_analysis,
     get_analyses_for_key,
@@ -245,3 +247,43 @@ async def get_infographic(analysis_id: str, key: dict = Depends(require_api_key)
         raise HTTPException(status_code=425, detail=f"Analysis not complete. Status: {analysis['status']}")
 
     return HTMLResponse(content=analysis["result_infographic"] or "<p>No infographic available</p>")
+
+
+# ── Admin Endpoints ──────────────────────────────────────────────────
+
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
+
+
+@app.post("/admin/create-key", tags=["Admin"])
+async def admin_create_key(
+    request: Request,
+    x_admin_secret: str | None = Header(None),
+):
+    """Create a new API key (admin only).
+
+    Protected by the ADMIN_SECRET environment variable.
+    Set ADMIN_SECRET env var and pass it as X-Admin-Secret header.
+    """
+    if not ADMIN_SECRET:
+        raise HTTPException(status_code=404, detail="Not found")
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    body = await request.json()
+    name = body.get("name", "")
+    email = body.get("email", "")
+    tier = body.get("tier", "free")
+
+    if not name:
+        raise HTTPException(status_code=400, detail="'name' is required")
+    if tier not in ("free", "pro", "enterprise"):
+        raise HTTPException(status_code=400, detail="tier must be free, pro, or enterprise")
+
+    result = create_api_key(name, email, tier)
+    return {
+        "id": result["id"],
+        "api_key": result["api_key"],
+        "name": result["name"],
+        "tier": result["tier"],
+        "credits_remaining": result["credits_remaining"],
+    }

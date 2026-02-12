@@ -153,6 +153,41 @@ python -m due_diligence.api.manage list-analyses <key-id>
 | `pro` | 100 analyses | Active investors |
 | `enterprise` | Unlimited | VC firms, accelerators |
 
+## Cloud Deployment (Google Cloud Run)
+
+One-command deployment to Google Cloud Run:
+
+```bash
+# Prerequisites: gcloud CLI authenticated, billing-enabled project
+./deploy.sh --project your-gcp-project-id --region us-central1
+```
+
+The deploy script handles:
+- Artifact Registry setup
+- Docker image build and push via Cloud Build
+- Secret Manager for your Anthropic API key and admin secret
+- Cloud Run deployment with always-on CPU (for background workers)
+- `min-instances: 1` to keep the service warm
+
+After deployment, create your first API key:
+
+```bash
+curl -X POST https://your-service-xxx.run.app/admin/create-key \
+  -H "X-Admin-Secret: your-admin-secret" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My First Key", "tier": "pro"}'
+```
+
+**Cloud Run config highlights:**
+- 1 vCPU, 1GB RAM per instance
+- `--no-cpu-throttling` — background worker threads stay active between requests
+- `--min-instances=1` — always-on, no cold starts
+- `--max-instances=5` — scales up to 5 concurrent instances
+- `--timeout=600` — 10-minute request timeout (analyses take 3-7 min)
+- Gen2 execution environment (full Linux compatibility)
+
+**Important:** SQLite works for single-instance deployments. For multi-instance scaling, switch to Cloud SQL (PostgreSQL). The database layer (`api/database.py`) is designed for easy migration.
+
 ## Configuration
 
 | Variable | Default | Description |
@@ -162,3 +197,4 @@ python -m due_diligence.api.manage list-analyses <key-id>
 | `WRITING_MODEL` | `claude-sonnet-4-20250514` | Model for writing agents |
 | `OUTPUT_DIR` | `./outputs` | Output directory for generated files |
 | `DD_DATABASE_PATH` | `api/due_diligence.db` | SQLite database path |
+| `ADMIN_SECRET` | (empty) | Secret for `/admin/create-key` endpoint |
