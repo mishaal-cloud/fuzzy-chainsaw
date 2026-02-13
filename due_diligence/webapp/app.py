@@ -107,7 +107,24 @@ async def get_status(job_id: str):
         "progress_pct": job["progress_pct"],
         "elapsed": job["elapsed"],
         "error": job.get("error"),
+        "error_stage": job.get("error_stage"),
+        "retryable": job.get("retryable", False),
+        "retry_info": job.get("retry_info"),
     }
+
+
+@app.post("/api/retry/{job_id}")
+async def retry_analysis(job_id: str):
+    """Retry a failed analysis."""
+    job = job_store.get(job_id)
+    if not job:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if job["status"] != "failed":
+        return JSONResponse({"error": "Only failed analyses can be retried"}, status_code=400)
+    if not job_store.reset_for_retry(job_id):
+        return JSONResponse({"error": "Could not reset job"}, status_code=500)
+    worker_pool.enqueue(job_id)
+    return {"ok": True, "job_id": job_id}
 
 
 @app.get("/api/results/{job_id}")

@@ -2,6 +2,7 @@
 
 import time
 import random
+import logging
 
 import anthropic
 from rich.console import Console
@@ -10,8 +11,13 @@ from rich.panel import Panel
 from due_diligence.config import ANTHROPIC_API_KEY
 
 console = Console()
+logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 5
+# Rate-limit retries (shorter backoff, fewer retries)
+RATE_LIMIT_RETRIES = 5
+# Overloaded retries (longer backoff, more retries — 529s can persist for minutes)
+OVERLOAD_RETRIES = 8
+OVERLOAD_BASE_WAIT = 5  # start at 5s instead of 1s
 
 
 class BaseAgent:
@@ -28,16 +34,26 @@ class BaseAgent:
         self.max_tokens = max_tokens
         self.tools = tools or []
         self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        # Callback for reporting retry status to callers (e.g. webapp job store)
+        self.on_retry: callable | None = None
+
+    def _notify_retry(self, reason: str, attempt: int, max_attempts: int, wait: float):
+        """Notify callers about retry status."""
+        msg = f"{reason}, retrying in {wait:.0f}s (attempt {attempt + 1}/{max_attempts})"
+        console.print(f"  [yellow]⏳[/yellow] {msg}")
+        logger.warning(f"{self.name}: {msg}")
+        if self.on_retry:
+            self.on_retry(reason, attempt, max_attempts, wait)
 
     def _call_api(self, **kwargs):
-        """Call the Anthropic API with exponential backoff on rate limits."""
-        for attempt in range(MAX_RETRIES):
+        """Call the Anthropic API with exponential backoff on rate limits and overload."""
+        max_attempts = max(RATE_LIMIT_RETRIES, OVERLOAD_RETRIES)
+        for attempt in range(max_attempts):
             try:
                 return self.client.messages.create(**kwargs)
             except anthropic.RateLimitError as e:
-                if attempt == MAX_RETRIES - 1:
+                if attempt >= RATE_LIMIT_RETRIES - 1:
                     raise
-                # Use retry-after header if available, otherwise exponential backoff
                 retry_after = None
                 if hasattr(e, "response") and e.response is not None:
                     retry_after = e.response.headers.get("retry-after")
@@ -45,14 +61,15 @@ class BaseAgent:
                     wait = float(retry_after)
                 else:
                     wait = min(60, (2 ** attempt) + random.uniform(0, 1))
-                console.print(f"  [yellow]⏳[/yellow] Rate limited, retrying in {wait:.1f}s (attempt {attempt + 1}/{MAX_RETRIES})")
+                self._notify_retry("Rate limited", attempt, RATE_LIMIT_RETRIES, wait)
                 time.sleep(wait)
             except anthropic.APIStatusError as e:
                 if e.status_code == 529:  # Overloaded
-                    if attempt == MAX_RETRIES - 1:
+                    if attempt >= OVERLOAD_RETRIES - 1:
                         raise
-                    wait = min(60, (2 ** attempt) + random.uniform(0, 1))
-                    console.print(f"  [yellow]⏳[/yellow] API overloaded, retrying in {wait:.1f}s (attempt {attempt + 1}/{MAX_RETRIES})")
+                    # Longer backoff for overload: 5, 10, 20, 40, 60, 60, 60, 60
+                    wait = min(60, OVERLOAD_BASE_WAIT * (2 ** attempt) + random.uniform(0, 2))
+                    self._notify_retry("API overloaded", attempt, OVERLOAD_RETRIES, wait)
                     time.sleep(wait)
                 else:
                     raise

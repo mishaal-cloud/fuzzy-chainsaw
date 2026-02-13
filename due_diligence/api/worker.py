@@ -4,6 +4,9 @@ import json
 import time
 import threading
 import traceback
+import logging
+
+import anthropic
 
 from due_diligence.api.database import (
     get_next_queued,
@@ -20,6 +23,24 @@ from due_diligence.agents.investor_memo import create_investor_memo_agent, build
 from due_diligence.agents.report_generator import create_report_generator_agent, build_prompt as report_prompt
 from due_diligence.agents.infographic import create_infographic_agent, build_prompt as infographic_prompt
 from due_diligence.tools.chart_generator import generate_all_charts
+
+logger = logging.getLogger(__name__)
+
+
+def _friendly_error(exc: Exception) -> str:
+    """Convert raw API exceptions into user-friendly messages."""
+    if isinstance(exc, anthropic.APIStatusError) and exc.status_code == 529:
+        return (
+            "The AI service is temporarily overloaded. "
+            "This usually resolves within a few minutes — please retry."
+        )
+    if isinstance(exc, anthropic.RateLimitError):
+        return "Rate limit reached. Please try again in a few minutes."
+    if isinstance(exc, anthropic.AuthenticationError):
+        return "API authentication failed. Please check the server's API key configuration."
+    if isinstance(exc, anthropic.APIConnectionError):
+        return "Could not connect to the AI service. Please check network connectivity and retry."
+    return f"An unexpected error occurred ({type(exc).__name__}). Please retry or contact support."
 
 
 STAGE_NAMES = [
@@ -101,8 +122,8 @@ def run_analysis(analysis_id: str, query: str):
         )
 
     except Exception as e:
-        tb = traceback.format_exc()
-        fail_analysis(analysis_id, f"{type(e).__name__}: {e}\n{tb}")
+        logger.error(f"Analysis {analysis_id} failed: {traceback.format_exc()}")
+        fail_analysis(analysis_id, _friendly_error(e))
 
 
 class AnalysisWorker:

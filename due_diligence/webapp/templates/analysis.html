@@ -25,6 +25,10 @@
                     <span id="progress-pct">0%</span>
                     <span id="progress-time">0s elapsed</span>
                 </div>
+                <div id="retry-banner" style="display: none; background: #1e293b; border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 1rem; color: #fbbf24; font-size: 0.9rem; text-align: center;">
+                    <span style="margin-right: 0.5rem;">&#9203;</span>
+                    <span id="retry-banner-text"></span>
+                </div>
 
                 <div class="stages" id="stages-list">
                     <div class="stage-item" data-stage="1">
@@ -85,8 +89,12 @@
             <div class="error-card">
                 <div class="error-icon">!</div>
                 <h2>Analysis Failed</h2>
+                <p id="error-stage-info" style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;"></p>
                 <p id="error-detail"></p>
-                <a href="/" class="btn-primary">Try Again</a>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                    <button id="retry-btn" class="btn-primary" onclick="retryAnalysis()" style="display: none;">Retry Analysis</button>
+                    <a href="/" class="btn-primary" style="background: #475569;">New Analysis</a>
+                </div>
             </div>
         </div>
 
@@ -179,12 +187,37 @@
                     setTimeout(loadResults, 500);
                 }
 
+                // Show/hide retry banner during API backoff
+                const retryBanner = document.getElementById('retry-banner');
+                if (data.retry_info && data.status === 'running') {
+                    retryBanner.style.display = 'block';
+                    document.getElementById('retry-banner-text').textContent = data.retry_info;
+                } else {
+                    retryBanner.style.display = 'none';
+                }
+
                 // Handle failure
                 if (data.status === 'failed') {
                     clearInterval(pollTimer);
                     document.getElementById('progress-view').style.display = 'none';
                     document.getElementById('error-view').style.display = 'flex';
-                    document.getElementById('error-detail').textContent = data.error || 'Unknown error';
+                    document.getElementById('error-detail').textContent = data.error || 'An unexpected error occurred.';
+                    // Show which stage failed
+                    if (data.error_stage) {
+                        const stageNames = ['', 'Company Research', 'Market Analysis', 'Financial Modeling',
+                                          'Risk Assessment', 'Investor Memo', 'Report Generation', 'Infographic'];
+                        document.getElementById('error-stage-info').textContent =
+                            `Failed during Stage ${data.error_stage}/7 — ${stageNames[data.error_stage] || 'Unknown'}`;
+                    }
+                    // Show retry button if the error is retryable
+                    if (data.retryable) {
+                        document.getElementById('retry-btn').style.display = 'inline-block';
+                    }
+                }
+
+                // Handle queued status (after retry)
+                if (data.status === 'queued') {
+                    document.getElementById('progress-title').textContent = 'Retrying analysis...';
                 }
             } catch (err) {
                 // Network error, keep polling
@@ -278,6 +311,39 @@
             a.download = 'investor_memo.md';
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        // ── Retry ─────────────────────────────────────────────
+        async function retryAnalysis() {
+            const btn = document.getElementById('retry-btn');
+            btn.disabled = true;
+            btn.textContent = 'Retrying...';
+            try {
+                const res = await fetch(`/api/retry/${JOB_ID}`, { method: 'POST' });
+                if (res.ok) {
+                    // Switch back to progress view and resume polling
+                    document.getElementById('error-view').style.display = 'none';
+                    document.getElementById('progress-view').style.display = 'flex';
+                    document.getElementById('progress-bar').style.width = '0%';
+                    document.getElementById('progress-pct').textContent = '0%';
+                    document.getElementById('progress-title').textContent = 'Retrying analysis...';
+                    // Reset stage icons
+                    for (let i = 1; i <= 7; i++) {
+                        const item = document.querySelector(`.stage-item[data-stage="${i}"]`);
+                        const icon = document.getElementById(`icon-${i}`);
+                        item.classList.remove('active', 'done');
+                        icon.textContent = i;
+                    }
+                    pollTimer = setInterval(pollStatus, 2000);
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Retry failed');
+                }
+            } catch (err) {
+                alert('Network error — please try again.');
+            }
+            btn.disabled = false;
+            btn.textContent = 'Retry Analysis';
         }
 
         // ── Start polling ───────────────────────────────────

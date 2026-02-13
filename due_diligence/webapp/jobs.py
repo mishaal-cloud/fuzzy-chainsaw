@@ -4,7 +4,10 @@ import time
 import uuid
 import threading
 import traceback
+import logging
 from typing import Any
+
+import anthropic
 
 from due_diligence.agents.company_research import create_company_research_agent, build_prompt as company_prompt
 from due_diligence.agents.market_analysis import create_market_analysis_agent, build_prompt as market_prompt
@@ -14,6 +17,7 @@ from due_diligence.agents.investor_memo import create_investor_memo_agent, build
 from due_diligence.agents.report_generator import create_report_generator_agent, build_prompt as report_prompt
 from due_diligence.agents.infographic import create_infographic_agent, build_prompt as infographic_prompt
 
+logger = logging.getLogger(__name__)
 
 STAGES = [
     (1, "Company Research", "Researching company background, team, funding, and traction..."),
@@ -24,6 +28,26 @@ STAGES = [
     (6, "Report Generation", "Creating detailed HTML investment report..."),
     (7, "Infographic", "Designing visual summary infographic..."),
 ]
+
+
+def _friendly_error(exc: Exception) -> str:
+    """Convert raw API exceptions into user-friendly messages."""
+    if isinstance(exc, anthropic.APIStatusError) and exc.status_code == 529:
+        return (
+            "The AI service is temporarily overloaded. "
+            "This usually resolves within a few minutes — please retry."
+        )
+    if isinstance(exc, anthropic.RateLimitError):
+        return (
+            "Rate limit reached. The analysis will be retried automatically, "
+            "but if this persists please try again in a few minutes."
+        )
+    if isinstance(exc, anthropic.AuthenticationError):
+        return "API authentication failed. Please check the server's API key configuration."
+    if isinstance(exc, anthropic.APIConnectionError):
+        return "Could not connect to the AI service. Please check network connectivity and retry."
+    # Generic fallback — include the exception type but not the raw JSON blob
+    return f"An unexpected error occurred ({type(exc).__name__}). Please retry or contact support."
 
 
 class JobStore:
@@ -46,6 +70,9 @@ class JobStore:
                 "progress_pct": 0,
                 "elapsed": 0,
                 "error": None,
+                "error_stage": None,
+                "retry_info": None,
+                "retryable": False,
                 "memo": None,
                 "report": None,
                 "infographic": None,
@@ -67,6 +94,38 @@ class JobStore:
             if job_id in self._jobs:
                 self._jobs[job_id].update(kwargs)
 
+    def reset_for_retry(self, job_id: str) -> bool:
+        """Reset a failed job so it can be re-queued."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if not job or job["status"] != "failed":
+                return False
+            job.update({
+                "status": "queued",
+                "stage": 0,
+                "stage_name": "Queued",
+                "stage_detail": "Retrying analysis...",
+                "progress_pct": 0,
+                "error": None,
+                "error_stage": None,
+                "retry_info": None,
+                "retryable": False,
+                "memo": None,
+                "report": None,
+                "infographic": None,
+            })
+            return True
+
+
+def _make_retry_callback(job_id: str, store: JobStore):
+    """Create a callback that updates the job store with retry status."""
+    def on_retry(reason: str, attempt: int, max_attempts: int, wait: float):
+        store.update(
+            job_id,
+            retry_info=f"{reason} — retrying in {wait:.0f}s ({attempt + 1}/{max_attempts})",
+        )
+    return on_retry
+
 
 def _run_pipeline(job_id: str, store: JobStore):
     """Run the full analysis pipeline, updating the store along the way."""
@@ -79,67 +138,82 @@ def _run_pipeline(job_id: str, store: JobStore):
     start = time.time()
     store.update(job_id, status="running", started_at=start)
 
+    retry_cb = _make_retry_callback(job_id, store)
+
+    def _create_agent(factory):
+        agent = factory()
+        agent.on_retry = retry_cb
+        return agent
+
+    current_stage = 0
     try:
         # Stage 1: Company Research
+        current_stage = 1
         store.update(job_id, stage=1, stage_name="Company Research",
-                     stage_detail=STAGES[0][2], progress_pct=5)
-        agent = create_company_research_agent()
+                     stage_detail=STAGES[0][2], progress_pct=5, retry_info=None)
+        agent = _create_agent(create_company_research_agent)
         state["company_research"] = agent.run(company_prompt(query), state)
-        store.update(job_id, progress_pct=15)
+        store.update(job_id, progress_pct=15, retry_info=None)
 
         # Stage 2: Market Analysis
+        current_stage = 2
         store.update(job_id, stage=2, stage_name="Market Analysis",
-                     stage_detail=STAGES[1][2], progress_pct=18)
-        agent = create_market_analysis_agent()
+                     stage_detail=STAGES[1][2], progress_pct=18, retry_info=None)
+        agent = _create_agent(create_market_analysis_agent)
         state["market_analysis"] = agent.run(
             market_prompt(query, state["company_research"]), state
         )
-        store.update(job_id, progress_pct=32)
+        store.update(job_id, progress_pct=32, retry_info=None)
 
         # Stage 3: Financial Modeling
+        current_stage = 3
         store.update(job_id, stage=3, stage_name="Financial Modeling",
-                     stage_detail=STAGES[2][2], progress_pct=35)
-        agent = create_financial_modeling_agent()
+                     stage_detail=STAGES[2][2], progress_pct=35, retry_info=None)
+        agent = _create_agent(create_financial_modeling_agent)
         state["financial_modeling"] = agent.run(
             financial_prompt(query, state["company_research"], state["market_analysis"]), state
         )
-        store.update(job_id, progress_pct=48)
+        store.update(job_id, progress_pct=48, retry_info=None)
 
         # Stage 4: Risk Assessment
+        current_stage = 4
         store.update(job_id, stage=4, stage_name="Risk Assessment",
-                     stage_detail=STAGES[3][2], progress_pct=50)
-        agent = create_risk_assessment_agent()
+                     stage_detail=STAGES[3][2], progress_pct=50, retry_info=None)
+        agent = _create_agent(create_risk_assessment_agent)
         state["risk_assessment"] = agent.run(
             risk_prompt(query, state["company_research"], state["market_analysis"],
                        state["financial_modeling"]), state
         )
-        store.update(job_id, progress_pct=65)
+        store.update(job_id, progress_pct=65, retry_info=None)
 
         # Stage 5: Investor Memo
+        current_stage = 5
         store.update(job_id, stage=5, stage_name="Investor Memo",
-                     stage_detail=STAGES[4][2], progress_pct=68)
-        agent = create_investor_memo_agent()
+                     stage_detail=STAGES[4][2], progress_pct=68, retry_info=None)
+        agent = _create_agent(create_investor_memo_agent)
         state["investor_memo"] = agent.run(
             memo_prompt(query, state["company_research"], state["market_analysis"],
                        state["financial_modeling"], state["risk_assessment"]), state
         )
-        store.update(job_id, progress_pct=78)
+        store.update(job_id, progress_pct=78, retry_info=None)
 
         # Stage 6: HTML Report
+        current_stage = 6
         store.update(job_id, stage=6, stage_name="Report Generation",
-                     stage_detail=STAGES[5][2], progress_pct=80)
-        agent = create_report_generator_agent()
+                     stage_detail=STAGES[5][2], progress_pct=80, retry_info=None)
+        agent = _create_agent(create_report_generator_agent)
         state["report"] = agent.run(
             report_prompt(query, state["company_research"], state["market_analysis"],
                          state["financial_modeling"], state["risk_assessment"],
                          state["investor_memo"]), state
         )
-        store.update(job_id, progress_pct=90)
+        store.update(job_id, progress_pct=90, retry_info=None)
 
         # Stage 7: Infographic
+        current_stage = 7
         store.update(job_id, stage=7, stage_name="Infographic",
-                     stage_detail=STAGES[6][2], progress_pct=92)
-        agent = create_infographic_agent()
+                     stage_detail=STAGES[6][2], progress_pct=92, retry_info=None)
+        agent = _create_agent(create_infographic_agent)
         state["infographic"] = agent.run(
             infographic_prompt(query, state["company_research"], state["market_analysis"],
                               state["financial_modeling"], state["risk_assessment"],
@@ -155,6 +229,7 @@ def _run_pipeline(job_id: str, store: JobStore):
             stage_detail="Analysis complete!",
             progress_pct=100,
             elapsed=elapsed,
+            retry_info=None,
             memo=state.get("investor_memo", ""),
             report=state.get("report", ""),
             infographic=state.get("infographic", ""),
@@ -162,10 +237,16 @@ def _run_pipeline(job_id: str, store: JobStore):
 
     except Exception as e:
         elapsed = round(time.time() - start, 1)
+        is_retryable = isinstance(e, (anthropic.APIStatusError, anthropic.RateLimitError, anthropic.APIConnectionError))
+        stage_name = STAGES[current_stage - 1][1] if current_stage > 0 else "Initialization"
+        logger.error(f"Job {job_id} failed at stage {current_stage} ({stage_name}): {e}")
         store.update(
             job_id,
             status="failed",
-            error=f"{type(e).__name__}: {e}",
+            error=_friendly_error(e),
+            error_stage=current_stage,
+            retryable=is_retryable,
+            retry_info=None,
             elapsed=elapsed,
         )
 
