@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Due Diligence</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="landing">
+        <nav class="nav">
+            <div class="nav-brand">AI Due Diligence</div>
+        </nav>
+
+        <main class="hero">
+            <div class="hero-content">
+                <h1>Investment due diligence<br>in minutes, not weeks.</h1>
+                <p class="hero-sub">
+                    Enter any company's website. Our 7-agent AI pipeline researches the company,
+                    sizes the market, builds financial models, assesses risks, and delivers a
+                    professional investment report.
+                </p>
+
+                <form id="analyze-form" class="search-form">
+                    <div class="input-row">
+                        <div class="input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input
+                                type="url"
+                                id="url-input"
+                                placeholder="https://company-website.com"
+                                required
+                                autocomplete="off"
+                                autofocus
+                            >
+                        </div>
+                        <button type="submit" id="submit-btn">
+                            <span class="btn-text">Analyze</span>
+                            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14m-7-7 7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="input-hint" id="error-msg"></p>
+                </form>
+
+                <div class="examples">
+                    <span class="examples-label">Try:</span>
+                    <button class="example-chip" data-url="https://stripe.com">stripe.com</button>
+                    <button class="example-chip" data-url="https://anthropic.com">anthropic.com</button>
+                    <button class="example-chip" data-url="https://linear.app">linear.app</button>
+                    <button class="example-chip" data-url="https://agno.com">agno.com</button>
+                </div>
+            </div>
+
+            <div class="pipeline-viz">
+                <div class="pipeline-title">The 7-Agent Pipeline</div>
+                <div class="pipeline-steps">
+                    <div class="step"><div class="step-num">1</div><div class="step-label">Company Research</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">2</div><div class="step-label">Market Analysis</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">3</div><div class="step-label">Financial Model</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">4</div><div class="step-label">Risk Assessment</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">5</div><div class="step-label">Investor Memo</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">6</div><div class="step-label">Full Report</div></div>
+                    <div class="step-connector"></div>
+                    <div class="step"><div class="step-num">7</div><div class="step-label">Infographic</div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('analyze-form');
+        const input = document.getElementById('url-input');
+        const btn = document.getElementById('submit-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        // Example chips
+        document.querySelectorAll('.example-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                input.value = chip.dataset.url;
+                input.focus();
+            });
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = input.value.trim();
+            if (!url) return;
+
+            btn.disabled = true;
+            btn.querySelector('.btn-text').textContent = 'Starting...';
+            errorMsg.textContent = '';
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url}),
+                });
+                const data = await res.json();
+                if (data.error) {
+                    errorMsg.textContent = data.error;
+                    btn.disabled = false;
+                    btn.querySelector('.btn-text').textContent = 'Analyze';
+                    return;
+                }
+                window.location.href = data.redirect;
+            } catch (err) {
+                errorMsg.textContent = 'Something went wrong. Please try again.';
+                btn.disabled = false;
+                btn.querySelector('.btn-text').textContent = 'Analyze';
+            }
+        });
+    </script>
+</body>
+</html>

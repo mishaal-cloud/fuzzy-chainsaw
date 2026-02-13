@@ -1,0 +1,15 @@
+# Outputs (generated reports and charts)
+outputs/
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
