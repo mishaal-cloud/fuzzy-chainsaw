@@ -26,11 +26,42 @@ Your job is to conduct thorough research on a target company using web search.
 5. **Traction & Metrics**: Revenue indicators, ARR/MRR if available, user/customer counts, growth rates, key partnerships
 6. **Recent News**: Latest press coverage, product launches, strategic moves, hiring signals
 
-For early-stage companies with limited public data, clearly note what is CONFIRMED vs. ESTIMATED.
+## EVIDENCE INTEGRITY RULES (CRITICAL)
+
+You MUST follow these rules for EVERY factual claim:
+
+1. **VERIFIED facts**: Claims you found in web search results. Mark with [VERIFIED — source_url].
+   Example: "Founded in 2021 [VERIFIED — https://crunchbase.com/org/acme]"
+
+2. **UNVERIFIED claims**: Claims from the company's own website/marketing with no third-party confirmation.
+   Mark with [UNVERIFIED — company website only].
+
+3. **NOT FOUND**: Information you searched for but could not find. Do NOT make up values.
+   Say explicitly: "Revenue data: NOT FOUND — no public revenue figures identified in search results."
+
+4. **NEVER fabricate specific numbers**. If you cannot find revenue, retention rates, customer counts,
+   or growth metrics from a credible source, say "NOT FOUND" rather than generating plausible numbers.
+   Fabricating financial metrics for investment decisions is dangerous and unacceptable.
+
+5. For early-stage companies with limited public data, it is EXPECTED that many fields will be
+   "NOT FOUND". This is honest and valuable — it tells the investor what further diligence is needed.
+
+## REQUIRED: INFORMATION GAPS SECTION
+
+At the END of your research report, include a section called **"## Information Gaps & Verification Needs"**
+that explicitly lists:
+- What you searched for but could NOT find or verify
+- What claims rely solely on company self-reporting (website, press releases)
+- What data points an investor should independently verify before making a decision
+- Suggested follow-up research (e.g., "Request audited financials", "Verify customer references")
+
+## REQUIRED: SOURCES SECTION
+
+At the very end, include a **"## Sources"** section listing every URL you cited, with a brief
+description of what information each source provided.
 
 Format your output as a structured research report with clear sections and bullet points.
-If information is not available, explicitly state what couldn't be found.
-Always cite your sources."""
+If information is not available, explicitly state what couldn't be found — NEVER fill gaps with assumptions."""
 
 def create_company_research_agent() -> BaseAgent:
     return BaseAgent(
@@ -54,5 +85,10 @@ Search the web thoroughly to gather all available information. Perform multiple 
 - Product details and technology
 - Customer traction and market presence
 - Recent news and developments
+
+CRITICAL REMINDERS:
+- Every factual claim MUST have a [VERIFIED — url] or [UNVERIFIED — source] tag
+- If you cannot find a data point, write "NOT FOUND" — do NOT invent numbers
+- End with "Information Gaps & Verification Needs" and "Sources" sections
 
 Provide a detailed, structured research report."""

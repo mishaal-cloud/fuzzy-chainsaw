@@ -95,6 +95,11 @@
             <div class="results-header">
                 <h2>Analysis Complete</h2>
                 <p id="results-meta"></p>
+                <div class="download-bar">
+                    <button class="btn-download" onclick="downloadReport()">Download Report PDF</button>
+                    <button class="btn-download" onclick="downloadInfographic()">Download Infographic PDF</button>
+                    <button class="btn-download" onclick="downloadMemo()">Download Memo</button>
+                </div>
             </div>
 
             <div class="tabs">
@@ -198,6 +203,7 @@
                 `Completed in ${formatTime(data.elapsed)}`;
 
             // Render memo as HTML (it's markdown, do basic conversion)
+            _memoRaw = data.memo || '';
             document.getElementById('memo-content').innerHTML = markdownToHtml(data.memo);
 
             // Load report and infographic into iframes
@@ -237,6 +243,41 @@
                 .replace(/\n{2,}/g, '</p><p>')
                 .replace(/\n/g, '<br>');
             return '<p>' + html + '</p>';
+        }
+
+        // ── Downloads ──────────────────────────────────────
+        let _memoRaw = '';
+
+        function downloadReport() {
+            const iframe = document.getElementById('report-iframe');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const html = iframeDoc.documentElement.outerHTML;
+            const printWin = window.open('', '_blank');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); }, 500);
+        }
+
+        function downloadInfographic() {
+            const iframe = document.getElementById('infographic-iframe');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const html = iframeDoc.documentElement.outerHTML;
+            const printWin = window.open('', '_blank');
+            printWin.document.write(html);
+            printWin.document.close();
+            printWin.focus();
+            setTimeout(() => { printWin.print(); }, 500);
+        }
+
+        function downloadMemo() {
+            const blob = new Blob([_memoRaw], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'investor_memo.md';
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         // ── Start polling ───────────────────────────────────

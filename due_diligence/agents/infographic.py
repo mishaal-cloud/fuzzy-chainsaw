@@ -21,12 +21,19 @@ Design principles:
 
 The infographic MUST include:
 1. Company name and one-line description (large header)
-2. Key metrics dashboard (4-6 metric cards): funding, market size, revenue, team size, etc.
-3. Market opportunity visualization (TAM/SAM/SOM as nested circles or bars)
-4. Financial projection snapshot (Base case Year 1-5 as a simple bar chart using CSS)
-5. Risk dashboard (5 risk categories with color-coded severity indicators)
-6. Investment recommendation badge (INVEST / PASS / MORE DILIGENCE)
-7. Top 3 strengths and Top 3 risks as bullet points
+2. **Data Confidence Indicator** — A visual badge showing overall data confidence
+   (High/Medium/Low) based on how much information was verified vs. estimated.
+   Use color coding: green = high confidence, yellow = medium, red = low.
+3. Key metrics dashboard (4-6 metric cards): funding, market size, revenue, team size, etc.
+   - Each metric card should have a small icon indicating if the data is ✓ verified or ⚠ estimated
+4. Market opportunity visualization (TAM/SAM/SOM as nested circles or bars)
+5. **Financial projection snapshot showing ALL 3 SCENARIOS** (Bear/Base/Bull Year 5 revenue
+   as grouped bars or a comparison visual using CSS)
+6. **Risk Score Badge** — Large, prominent composite risk score (X.X/10) with a circular
+   gauge or progress ring visualization. Below it, show the 6 risk category mini-scores.
+7. Investment recommendation badge (INVEST / PASS / MORE DILIGENCE)
+8. Top 3 strengths and Top 3 risks as bullet points
+9. **Key Open Questions** — 2-3 critical items that need verification before investment
 
 Generate a COMPLETE, self-contained HTML document with embedded CSS.
 Use CSS animations sparingly (subtle fade-ins are ok).

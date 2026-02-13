@@ -49,26 +49,40 @@ For each dimension, provide:
 - Brief justification for each rating
 - Potential mitigants
 
+## INFORMATION AVAILABILITY RISK
+
+CRITICAL: Assess how much of your risk analysis is based on VERIFIED information vs. assumptions.
+If the company research flagged many "NOT FOUND" items, this INCREASES risk — an inability to
+verify team backgrounds, traction, or financials is itself a major risk factor. Flag this explicitly.
+
 End with:
-- **Overall Risk Rating**: LOW / MEDIUM / HIGH / CRITICAL (also provide a numeric score 1-10)
+- **Overall Risk Rating**: LOW / MEDIUM / HIGH / CRITICAL (also provide a numeric score 1-10,
+  where 1 = minimal risk and 10 = extreme risk)
 - **Top 3 risks** that could prevent a successful outcome
 - **Key risk mitigants** that the company has in place
+- **Information Risk**: What couldn't be verified and how that affects the risk assessment
 - **Recommended Protective Terms**: Suggest investor protections such as board seat requirements,
   milestone-based funding tranches, liquidation preferences, anti-dilution provisions,
   information rights, or other deal structure recommendations based on the risk profile
 
-Also include a JSON block with the risk ratings:
+Also include a JSON block with the risk ratings — include BOTH categorical AND numeric scores:
 
 ```json
 {
-  "market_risk": "LOW|MEDIUM|HIGH|CRITICAL",
-  "execution_risk": "LOW|MEDIUM|HIGH|CRITICAL",
-  "financial_risk": "LOW|MEDIUM|HIGH|CRITICAL",
-  "regulatory_risk": "LOW|MEDIUM|HIGH|CRITICAL",
-  "exit_risk": "LOW|MEDIUM|HIGH|CRITICAL",
-  "overall_risk": "LOW|MEDIUM|HIGH|CRITICAL"
+  "market_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "execution_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "financial_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "regulatory_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "exit_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "information_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "overall_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "composite_score": 0.0
 }
-```"""
+```
+
+Score each category 1-10 (1 = minimal risk, 10 = extreme risk).
+The composite_score is the weighted average: Market 25%, Execution 25%, Financial 25%,
+Regulatory 10%, Exit 10%, Information 5%."""
 
 def create_risk_assessment_agent() -> BaseAgent:
     return BaseAgent(

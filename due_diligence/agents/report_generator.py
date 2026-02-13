@@ -20,13 +20,36 @@ The HTML should be print-ready and look professional when opened in a browser.
 
 Structure the report as:
 1. Title page / header with company name and date
-2. Executive Summary box with key metrics
-3. Company Overview
-4. Market Analysis with TAM/SAM/SOM visualization
-5. Financial Projections table (Bear/Base/Bull)
-6. Risk Assessment heat map
-7. Investment Recommendation
-8. Appendix with detailed data
+2. **Data Confidence Banner** — A prominent callout at the top indicating:
+   - How much data was verified vs. estimated
+   - Overall data confidence level (High / Medium / Low)
+   - Brief note on key information gaps
+3. Executive Summary box with key metrics
+4. Company Overview
+5. Market Analysis with TAM/SAM/SOM visualization
+6. **Financial Projections table (Bear/Base/Bull)** — Show ALL THREE scenarios prominently
+   in a comparison table, NOT just the base case
+7. **Risk Assessment Dashboard** — Risk heat map as a styled grid with:
+   - 6 risk categories (Market, Execution, Financial, Regulatory, Exit, Information)
+   - Color-coded severity (green/yellow/orange/red)
+   - Numeric score per category (X/10)
+   - Composite risk score displayed prominently
+8. **Information Gaps & Open Questions** — Dedicated section listing:
+   - What could not be verified
+   - What relies on company self-reporting only
+   - Recommended follow-up diligence steps
+9. Investment Recommendation
+10. **Sources & Evidence Trail** — List of all cited sources with URLs
+11. Appendix with detailed data
+
+## EVIDENCE INTEGRITY IN THE REPORT
+
+- When presenting financial metrics, use visual indicators for data confidence:
+  - Green checkmark icon (✓) for VERIFIED data points
+  - Yellow warning icon (⚠) for ESTIMATED/MODELED data points
+  - Red question mark icon (?) for NOT FOUND / UNVERIFIED data points
+- In financial tables, include a "Basis" column or footer indicating whether each
+  number is from verified data, industry benchmarks, or analyst estimates
 
 IMPORTANT: Output ONLY the HTML code, no explanatory text before or after.
 Start with <!DOCTYPE html> and end with </html>."""
