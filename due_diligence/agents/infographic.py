@@ -60,6 +60,7 @@ def build_prompt(
     investor_memo: str,
     data_profile_block: str = "",
     consistency_block: str = "",
+    evaluation_block: str = "",
 ) -> str:
     return f"""Create a visually stunning HTML/CSS infographic summarizing this investment analysis.
 
@@ -67,6 +68,7 @@ def build_prompt(
 
 {data_profile_block}
 {consistency_block}
+{evaluation_block}
 
 **Company Research**:
 {company_research}

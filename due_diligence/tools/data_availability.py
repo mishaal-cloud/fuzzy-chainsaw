@@ -284,33 +284,87 @@ def _classify_field(text: str, field_name: str) -> DataPoint:
 
 
 def _detect_company_type(text: str) -> str:
-    """Heuristically detect the company type from research text."""
+    """Heuristically detect the company type from research text using weighted scoring.
+
+    Uses a scoring approach rather than first-match to handle ambiguous signals.
+    Each signal category has weighted indicators; the category with the highest
+    total score wins.
+    """
     text_lower = text.lower()
 
-    # Public company indicators
-    public_signals = ["nasdaq", "nyse", "stock ticker", "publicly traded", "ipo", "10-k", "sec filing", "market cap"]
-    if sum(1 for s in public_signals if s in text_lower) >= 2:
-        return "public"
+    scores: dict[str, float] = {
+        "public": 0,
+        "late_private": 0,
+        "early_stage": 0,
+        "pre_product": 0,
+    }
 
-    # Late-stage private indicators
-    late_signals = ["series c", "series d", "series e", "series f", "growth round", "late-stage",
-                    "unicorn", "billion-dollar valuation", "1000+ employees", "500+ employees"]
-    if any(s in text_lower for s in late_signals):
-        return "late_private"
+    # ── Public company signals ─────────────────────────────────────
+    public_strong = ["nasdaq", "nyse", "publicly traded", "10-k", "sec filing",
+                     "stock price", "earnings call", "quarterly earnings"]
+    public_moderate = ["ipo", "market cap", "stock ticker", "ticker symbol",
+                       "annual report", "shareholders", "public offering",
+                       "s-1 filing", "10-q"]
+    scores["public"] += 3.0 * sum(1 for s in public_strong if s in text_lower)
+    scores["public"] += 1.5 * sum(1 for s in public_moderate if s in text_lower)
 
-    # Early-stage indicators
-    early_signals = ["series a", "series b", "seed round", "pre-seed", "angel round",
-                     "early-stage", "y combinator", "techstars", "accelerator"]
-    if any(s in text_lower for s in early_signals):
-        return "early_stage"
+    # ── Late-stage private signals ─────────────────────────────────
+    late_strong = ["series c", "series d", "series e", "series f", "series g",
+                   "growth round", "late-stage", "unicorn"]
+    late_moderate = ["billion-dollar valuation", "billion valuation",
+                     "1000+ employees", "500+ employees", "hundreds of employees",
+                     "over 500 employees", "over 1000 employees",
+                     "ipo candidate", "pre-ipo", "crossover round",
+                     "decacorn", "growth equity"]
+    # Revenue scale signals (strong indicator of late-stage)
+    late_revenue = ["$100m", "$200m", "$500m", "$1b", "nine-figure revenue",
+                    "hundreds of millions", "over $50m arr", "over $100m"]
+    scores["late_private"] += 3.0 * sum(1 for s in late_strong if s in text_lower)
+    scores["late_private"] += 2.0 * sum(1 for s in late_moderate if s in text_lower)
+    scores["late_private"] += 2.0 * sum(1 for s in late_revenue if s in text_lower)
 
-    # Very early / pre-product
-    pre_signals = ["pre-revenue", "pre-product", "concept stage", "stealth", "just launched",
-                   "beta", "alpha version", "prototype"]
-    if any(s in text_lower for s in pre_signals):
-        return "pre_product"
+    # ── Early-stage signals ────────────────────────────────────────
+    early_strong = ["series a", "series b", "seed round", "seed funding"]
+    early_moderate = ["angel round", "angel investors", "early-stage",
+                      "y combinator", "techstars", "accelerator",
+                      "500 startups", "500 global", "first round capital",
+                      "incubator", "venture-backed", "a]round",
+                      "pre-series a", "bridge round",
+                      "seed extension", "post-seed"]
+    early_weak = ["startup", "founded in 202", "founded in 2023",
+                  "founded in 2024", "founded in 2025", "founded in 2026",
+                  "small team", "early customers", "initial traction",
+                  "product-market fit", "finding pmf"]
+    scores["early_stage"] += 3.0 * sum(1 for s in early_strong if s in text_lower)
+    scores["early_stage"] += 1.5 * sum(1 for s in early_moderate if s in text_lower)
+    scores["early_stage"] += 0.5 * sum(1 for s in early_weak if s in text_lower)
 
-    return "unknown"
+    # ── Pre-product signals ────────────────────────────────────────
+    pre_strong = ["pre-revenue", "pre-product", "concept stage", "stealth mode",
+                  "stealth startup", "no revenue", "zero revenue"]
+    pre_moderate = ["just launched", "alpha version", "prototype", "mvp",
+                    "minimum viable product", "pre-launch", "waitlist",
+                    "idea stage", "bootstrapping", "no customers yet",
+                    "looking for co-founder", "solo founder"]
+    pre_weak = ["beta version", "beta testing", "private beta",
+                "recently incorporated", "exploring", "early prototype"]
+    scores["pre_product"] += 3.0 * sum(1 for s in pre_strong if s in text_lower)
+    scores["pre_product"] += 1.5 * sum(1 for s in pre_moderate if s in text_lower)
+    scores["pre_product"] += 0.5 * sum(1 for s in pre_weak if s in text_lower)
+
+    # ── Resolve: pick the highest scoring category ─────────────────
+    # Public requires a minimum threshold (don't classify as public on one mention of "ipo")
+    if scores["public"] < 3.0:
+        scores["public"] = 0
+
+    best_type = max(scores, key=scores.get)  # type: ignore[arg-type]
+    best_score = scores[best_type]
+
+    if best_score == 0:
+        return "unknown"
+
+    logger.debug(f"Company type scores: {scores} -> {best_type}")
+    return best_type
 
 
 def parse_data_availability(company_research_text: str) -> DataProfile:

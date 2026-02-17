@@ -18,6 +18,7 @@ from due_diligence.agents.report_generator import create_report_generator_agent,
 from due_diligence.agents.infographic import create_infographic_agent, build_prompt as infographic_prompt
 from due_diligence.tools.data_availability import parse_data_availability
 from due_diligence.tools.consistency_checker import check_stage_consistency, ConsistencyReport
+from due_diligence.tools.evaluation_framework import build_framework_block, build_stage_instructions
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,11 @@ def _run_pipeline(job_id: str, store: JobStore):
         consistency = ConsistencyReport()
         cc_block = ""
         logger.info(f"Job {job_id}: data tier={data_profile.tier}, score={data_profile.score:.2f}")
+
+        # ── Evaluation Framework ──────────────────────────
+        company_type = data_profile.company_type
+        fw_block = build_framework_block(company_type)
+        logger.info(f"Job {job_id}: evaluation framework={company_type}")
         store.update(job_id, progress_pct=15, retry_info=None)
 
         # Stage 2: Market Analysis
@@ -171,9 +177,11 @@ def _run_pipeline(job_id: str, store: JobStore):
         store.update(job_id, stage=2, stage_name="Market Analysis",
                      stage_detail=STAGES[1][2], progress_pct=18, retry_info=None)
         agent = _create_agent(create_market_analysis_agent)
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "market_analysis")
         state["market_analysis"] = agent.run(
             market_prompt(query, state["company_research"],
-                         data_profile_block=dp_block, consistency_block=cc_block), state
+                         data_profile_block=dp_block, consistency_block=cc_block,
+                         evaluation_block=eval_block), state
         )
         consistency = check_stage_consistency("Market Analysis", state["market_analysis"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -184,9 +192,11 @@ def _run_pipeline(job_id: str, store: JobStore):
         store.update(job_id, stage=3, stage_name="Financial Modeling",
                      stage_detail=STAGES[2][2], progress_pct=35, retry_info=None)
         agent = _create_agent(create_financial_modeling_agent)
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "financial_modeling")
         state["financial_modeling"] = agent.run(
             financial_prompt(query, state["company_research"], state["market_analysis"],
-                            data_profile_block=dp_block, consistency_block=cc_block), state
+                            data_profile_block=dp_block, consistency_block=cc_block,
+                            evaluation_block=eval_block), state
         )
         consistency = check_stage_consistency("Financial Modeling", state["financial_modeling"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -197,10 +207,12 @@ def _run_pipeline(job_id: str, store: JobStore):
         store.update(job_id, stage=4, stage_name="Risk Assessment",
                      stage_detail=STAGES[3][2], progress_pct=50, retry_info=None)
         agent = _create_agent(create_risk_assessment_agent)
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "risk_assessment")
         state["risk_assessment"] = agent.run(
             risk_prompt(query, state["company_research"], state["market_analysis"],
                        state["financial_modeling"],
-                       data_profile_block=dp_block, consistency_block=cc_block), state
+                       data_profile_block=dp_block, consistency_block=cc_block,
+                       evaluation_block=eval_block), state
         )
         consistency = check_stage_consistency("Risk Assessment", state["risk_assessment"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -211,10 +223,12 @@ def _run_pipeline(job_id: str, store: JobStore):
         store.update(job_id, stage=5, stage_name="Investor Memo",
                      stage_detail=STAGES[4][2], progress_pct=68, retry_info=None)
         agent = _create_agent(create_investor_memo_agent)
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "investor_memo")
         state["investor_memo"] = agent.run(
             memo_prompt(query, state["company_research"], state["market_analysis"],
                        state["financial_modeling"], state["risk_assessment"],
-                       data_profile_block=dp_block, consistency_block=cc_block), state
+                       data_profile_block=dp_block, consistency_block=cc_block,
+                       evaluation_block=eval_block), state
         )
         consistency = check_stage_consistency("Investor Memo", state["investor_memo"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -229,7 +243,8 @@ def _run_pipeline(job_id: str, store: JobStore):
             report_prompt(query, state["company_research"], state["market_analysis"],
                          state["financial_modeling"], state["risk_assessment"],
                          state["investor_memo"],
-                         data_profile_block=dp_block, consistency_block=cc_block), state
+                         data_profile_block=dp_block, consistency_block=cc_block,
+                         evaluation_block=fw_block), state
         )
         store.update(job_id, progress_pct=90, retry_info=None)
 
@@ -242,7 +257,8 @@ def _run_pipeline(job_id: str, store: JobStore):
             infographic_prompt(query, state["company_research"], state["market_analysis"],
                               state["financial_modeling"], state["risk_assessment"],
                               state["investor_memo"],
-                              data_profile_block=dp_block, consistency_block=cc_block), state
+                              data_profile_block=dp_block, consistency_block=cc_block,
+                              evaluation_block=fw_block), state
         )
 
         elapsed = round(time.time() - start, 1)

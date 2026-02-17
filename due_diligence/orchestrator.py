@@ -17,6 +17,7 @@ from due_diligence.tools.chart_generator import generate_all_charts
 from due_diligence.tools.file_writer import save_report, save_text_output
 from due_diligence.tools.data_availability import parse_data_availability
 from due_diligence.tools.consistency_checker import check_stage_consistency, ConsistencyReport, generate_consistency_summary
+from due_diligence.tools.evaluation_framework import build_framework_block, build_stage_instructions
 from due_diligence.config import OUTPUT_DIR
 
 console = Console()
@@ -79,6 +80,11 @@ class DueDiligencePipeline:
         console.print(f"  Verified: {len(data_profile.verified_facts)} | Not Found: {len(data_profile.not_found)} | Unverified: {len(data_profile.unverified_claims)}")
         if not data_profile.has_revenue_data:
             console.print("  [yellow]⚠[/yellow] No revenue data — financials will be modeled estimates only")
+
+        # ── Evaluation Framework ────────────────────────────────────
+        company_type = data_profile.company_type
+        fw_block = build_framework_block(company_type)
+        console.print(f"  Evaluation Framework: {company_type}")
         console.print()
 
         # Initialize consistency report
@@ -88,8 +94,10 @@ class DueDiligencePipeline:
         # Stage 2: Market Analysis
         console.print("[bold]Stage 2/7[/bold] — Market Analysis")
         agent = create_market_analysis_agent()
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "market_analysis")
         prompt = market_prompt(query, self.state["company_research"],
-                              data_profile_block=dp_block, consistency_block=cc_block)
+                              data_profile_block=dp_block, consistency_block=cc_block,
+                              evaluation_block=eval_block)
         self.state["market_analysis"] = agent.run(prompt, self.state)
         consistency = check_stage_consistency("Market Analysis", self.state["market_analysis"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -98,8 +106,10 @@ class DueDiligencePipeline:
         # Stage 3: Financial Modeling
         console.print("[bold]Stage 3/7[/bold] — Financial Modeling")
         agent = create_financial_modeling_agent()
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "financial_modeling")
         prompt = financial_prompt(query, self.state["company_research"], self.state["market_analysis"],
-                                 data_profile_block=dp_block, consistency_block=cc_block)
+                                 data_profile_block=dp_block, consistency_block=cc_block,
+                                 evaluation_block=eval_block)
         self.state["financial_modeling"] = agent.run(prompt, self.state)
         consistency = check_stage_consistency("Financial Modeling", self.state["financial_modeling"], data_profile, consistency)
         cc_block = consistency.to_prompt_block()
@@ -115,6 +125,7 @@ class DueDiligencePipeline:
         # Stage 4: Risk Assessment
         console.print("[bold]Stage 4/7[/bold] — Risk Assessment")
         agent = create_risk_assessment_agent()
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "risk_assessment")
         prompt = risk_prompt(
             query,
             self.state["company_research"],
@@ -122,6 +133,7 @@ class DueDiligencePipeline:
             self.state["financial_modeling"],
             data_profile_block=dp_block,
             consistency_block=cc_block,
+            evaluation_block=eval_block,
         )
         self.state["risk_assessment"] = agent.run(prompt, self.state)
         consistency = check_stage_consistency("Risk Assessment", self.state["risk_assessment"], data_profile, consistency)
@@ -131,6 +143,7 @@ class DueDiligencePipeline:
         # Stage 5: Investor Memo
         console.print("[bold]Stage 5/7[/bold] — Investor Memo")
         agent = create_investor_memo_agent()
+        eval_block = fw_block + "\n" + build_stage_instructions(company_type, "investor_memo")
         prompt = memo_prompt(
             query,
             self.state["company_research"],
@@ -139,6 +152,7 @@ class DueDiligencePipeline:
             self.state["risk_assessment"],
             data_profile_block=dp_block,
             consistency_block=cc_block,
+            evaluation_block=eval_block,
         )
         self.state["investor_memo"] = agent.run(prompt, self.state)
         consistency = check_stage_consistency("Investor Memo", self.state["investor_memo"], data_profile, consistency)
@@ -152,6 +166,7 @@ class DueDiligencePipeline:
         # Stage 6: HTML Report
         console.print("[bold]Stage 6/7[/bold] — Report Generation")
         agent = create_report_generator_agent()
+        eval_block = fw_block  # Report doesn't have stage-specific instructions, just the header
         prompt = report_prompt(
             query,
             self.state["company_research"],
@@ -161,6 +176,7 @@ class DueDiligencePipeline:
             self.state["investor_memo"],
             data_profile_block=dp_block,
             consistency_block=cc_block,
+            evaluation_block=eval_block,
         )
         self.state["report"] = agent.run(prompt, self.state)
 
@@ -181,6 +197,7 @@ class DueDiligencePipeline:
             self.state["investor_memo"],
             data_profile_block=dp_block,
             consistency_block=cc_block,
+            evaluation_block=fw_block,
         )
         self.state["infographic"] = agent.run(prompt, self.state)
 

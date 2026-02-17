@@ -113,13 +113,14 @@ def create_financial_modeling_agent() -> BaseAgent:
     )
 
 
-def build_prompt(query: str, company_research: str, market_analysis: str, data_profile_block: str = "", consistency_block: str = "") -> str:
+def build_prompt(query: str, company_research: str, market_analysis: str, data_profile_block: str = "", consistency_block: str = "", evaluation_block: str = "") -> str:
     return f"""Build comprehensive financial projections for this investment opportunity.
 
 **Target Company/Query**: {query}
 
 {data_profile_block}
 {consistency_block}
+{evaluation_block}
 
 **Company Research**:
 {company_research}
@@ -129,6 +130,10 @@ def build_prompt(query: str, company_research: str, market_analysis: str, data_p
 
 Based on the research and market data above, build a detailed financial model with
 Bear/Base/Bull revenue projections, unit economics analysis, and valuation estimates.
+
+IMPORTANT: If STAGE-SPECIFIC GUIDANCE is provided above, follow those instructions — they
+tailor the financial model to the company's maturity stage (e.g., pre-product companies need
+burn analysis, not 5-year revenue projections).
 
 CRITICAL: Review the DATA AVAILABILITY PROFILE above. For any metric marked as [MISSING],
 you MUST prefix your numbers with [MODELED ESTIMATE] and explain your assumptions.

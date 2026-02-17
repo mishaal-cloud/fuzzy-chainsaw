@@ -82,6 +82,7 @@ def build_prompt(
     risk_assessment: str,
     data_profile_block: str = "",
     consistency_block: str = "",
+    evaluation_block: str = "",
 ) -> str:
     return f"""Write a professional investment memo synthesizing all prior analysis.
 
@@ -89,6 +90,7 @@ def build_prompt(
 
 {data_profile_block}
 {consistency_block}
+{evaluation_block}
 
 **Company Research**:
 {company_research}
@@ -104,6 +106,10 @@ def build_prompt(
 
 Synthesize everything above into a crisp, professional investment memo suitable for a
 partnership meeting at a top VC firm. Be direct with your recommendation.
+
+IMPORTANT: If STAGE-SPECIFIC GUIDANCE is provided above, follow the memo structure and
+recommendation framework for this company's stage. A pre-seed memo reads very differently
+from a growth-stage memo.
 
 CRITICAL: The DATA AVAILABILITY PROFILE shows what is verified vs. missing. Your memo
 MUST reflect this reality. Do NOT upgrade estimated/missing data to stated facts.

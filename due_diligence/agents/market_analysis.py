@@ -63,19 +63,23 @@ def create_market_analysis_agent() -> BaseAgent:
     )
 
 
-def build_prompt(query: str, company_research: str, data_profile_block: str = "", consistency_block: str = "") -> str:
+def build_prompt(query: str, company_research: str, data_profile_block: str = "", consistency_block: str = "", evaluation_block: str = "") -> str:
     return f"""Conduct a comprehensive market analysis for an investment due diligence evaluation.
 
 **Target Company/Query**: {query}
 
 {data_profile_block}
 {consistency_block}
+{evaluation_block}
 
 **Company Research (from prior analysis)**:
 {company_research}
 
 Based on the company research above, analyze the market this company operates in.
 Use web search to find real market data, competitor information, and industry reports.
+
+IMPORTANT: If STAGE-SPECIFIC GUIDANCE is provided above, follow those instructions — they
+tailor your analysis to the company's maturity stage.
 
 Provide a detailed market analysis report with TAM/SAM/SOM sizing, competitive landscape,
 industry trends, and market dynamics."""
