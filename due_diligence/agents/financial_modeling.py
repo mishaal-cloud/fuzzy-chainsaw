@@ -62,7 +62,30 @@ You MUST produce financial projections including:
    - Exit valuations at multiple scenarios (10x, 15x, 25x ARR multiples)
    - MOIC (Multiple on Invested Capital) for each scenario
    - Estimated IRR (Internal Rate of Return) assuming 5-year hold
+   - **Probability-Weighted Expected Return**: Assign probabilities to Bear (25%), Base (50%),
+     Bull (25%) and calculate the probability-weighted expected MOIC and IRR
    - Expected return profile for the investor
+
+5. **Sensitivity Analysis**:
+   - Show how Year 5 revenue and valuation change if:
+     a. Revenue growth is 20% lower than base case
+     b. Revenue growth is 20% higher than base case
+     c. Gross margins compress 500bps vs. assumption
+     d. Revenue multiple at exit is 5x lower than assumed
+   - Present as a clear sensitivity table
+   - Identify which 1-2 assumptions have the MOST impact on returns
+
+6. **Cap Table & Dilution Analysis** (if investment amount is specified in query):
+   - Implied pre-money and post-money valuation
+   - Estimated investor ownership percentage at entry
+   - Dilution estimate through next 1-2 follow-on rounds (assume 20% dilution each)
+   - Fully diluted ownership at exit under each scenario
+   - If insufficient data for cap table analysis, note what information would be needed
+
+7. **Cash Runway & Path to Profitability**:
+   - Estimated months of runway based on last known funding and burn rate
+   - When does the company reach cash-flow breakeven in Base case?
+   - Will additional fundraising be required? If so, approximately when?
 
 CRITICAL: Output the financial projections data in a structured format.
 After your analysis, include a JSON block wrapped in ```json``` tags with this exact structure:
@@ -97,6 +120,25 @@ After your analysis, include a JSON block wrapped in ```json``` tags with this e
     "revenue_basis": "verified|estimated|no_data",
     "unit_economics_basis": "verified|estimated|no_data",
     "assumptions_note": "Brief description of data foundation"
+  },
+  "probability_weighted_return": {
+    "bear_probability": 0.25,
+    "base_probability": 0.50,
+    "bull_probability": 0.25,
+    "expected_moic": 0.0,
+    "expected_irr_pct": 0.0
+  },
+  "sensitivity": {
+    "growth_minus_20pct_year5_revenue": 0,
+    "growth_plus_20pct_year5_revenue": 0,
+    "margin_compress_500bps_year5_ebitda": 0,
+    "exit_multiple_minus_5x_valuation": 0
+  },
+  "runway": {
+    "estimated_monthly_burn": 0,
+    "estimated_runway_months": 0,
+    "breakeven_year": "Year X or N/A",
+    "next_fundraise_needed": true
   }
 }
 ```

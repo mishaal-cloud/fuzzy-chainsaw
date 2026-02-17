@@ -20,13 +20,20 @@ For every market analysis, you MUST provide:
    - Competitive positioning matrix
    - Key differentiators and moats
 
-3. **Industry Trends**:
+3. **Comparable Transactions & Valuation Benchmarks**:
+   - Recent M&A deals in this space (acquirer, target, price, multiples)
+   - Recent funding rounds of comparable companies (company, round, valuation, revenue multiple)
+   - Public company comparables if applicable (ticker, EV/Revenue, EV/EBITDA, growth rate)
+   - What do these comps imply for the target company's valuation?
+   - If no recent transactions found, state "NOT FOUND" and note the closest available comps
+
+4. **Industry Trends**:
    - Macro trends driving the market
    - Regulatory environment
    - Technology shifts
    - Customer behavior changes
 
-4. **Market Dynamics**:
+5. **Market Dynamics**:
    - Barriers to entry
    - Supplier/buyer power
    - Threat of substitutes

@@ -20,11 +20,41 @@ Your job is to conduct thorough research on a target company using web search.
 ## REQUIRED RESEARCH SECTIONS
 
 1. **Company Overview**: What the company does, founding date, headquarters, mission statement
+
 2. **Product/Service**: Core product offering, technology stack, key features, competitive advantages
-3. **Team**: Founders and their backgrounds, key executives, team size, notable advisors
-4. **Funding History**: All funding rounds, amounts raised, key investors, latest valuation
-5. **Traction & Metrics**: Revenue indicators, ARR/MRR if available, user/customer counts, growth rates, key partnerships
-6. **Recent News**: Latest press coverage, product launches, strategic moves, hiring signals
+
+3. **Team & Management**:
+   - Founders and their backgrounds — previous companies, exits, domain expertise
+   - Key executives (CTO, CFO, VP Sales, etc.) and their experience
+   - Team size and recent hiring velocity (growing fast? layoffs?)
+   - Notable advisors or board members
+   - **Critical Hire Gaps**: If no CFO, no VP Sales, no CTO, etc. — note this explicitly
+   - **Key Person Risk**: Is the company overly dependent on one founder/executive?
+
+4. **Funding History & Cap Table Indicators**:
+   - All funding rounds, amounts raised, key investors, latest valuation
+   - Total capital raised to date
+   - Investor quality — are there tier-1 VCs? Strategic investors?
+   - Any secondary transactions, debt financing, or convertible notes mentioned?
+   - If post-money valuation is available, note implied ownership by investor group
+
+5. **Traction & Metrics**:
+   - Revenue indicators: ARR/MRR if available, revenue run-rate, growth rates
+   - User/customer counts, logos, case studies
+   - Key partnerships or channel relationships
+   - **Customer Concentration Signals**: Are there dominant customers mentioned? Does one
+     partnership/customer seem to drive most of the revenue? Note any signals.
+   - **Revenue Quality Signals**: Is revenue recurring (SaaS) or transactional? Contract-based
+     or usage-based? What is the pricing model? Any mention of net dollar retention (NDR),
+     gross retention, or churn?
+
+6. **Go-to-Market & Distribution**:
+   - How does the company sell? (direct sales, self-serve, channel partners, PLG)
+   - Target customer profile (enterprise, SMB, consumer)
+   - Geographic focus — domestic only or international?
+   - Any mention of sales team size, sales cycle length, or marketing channels
+
+7. **Recent News**: Latest press coverage, product launches, strategic moves, hiring signals
 
 ## EVIDENCE INTEGRITY RULES (CRITICAL)
 
@@ -80,15 +110,18 @@ def build_prompt(query: str) -> str:
 
 Search the web thoroughly to gather all available information. Perform multiple searches covering:
 - The company name and what they do
-- Founding team and key executives
-- Funding history and investors
+- Founding team, key executives, and management depth
+- Funding history, investors, and any cap table signals
 - Product details and technology
-- Customer traction and market presence
+- Customer traction, revenue quality, and customer concentration signals
+- Go-to-market strategy and distribution model
 - Recent news and developments
 
 CRITICAL REMINDERS:
 - Every factual claim MUST have a [VERIFIED — url] or [UNVERIFIED — source] tag
 - If you cannot find a data point, write "NOT FOUND" — do NOT invent numbers
 - End with "Information Gaps & Verification Needs" and "Sources" sections
+- Pay special attention to REVENUE QUALITY (recurring vs one-time) and CUSTOMER CONCENTRATION
+  (are a few customers dominating revenue?)
 
 Provide a detailed, structured research report."""

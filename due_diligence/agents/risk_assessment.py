@@ -17,16 +17,21 @@ LOW / MEDIUM / HIGH / CRITICAL:
    - Regulatory/policy risk affecting the market
 
 2. **Execution Risk**:
+   - **Management Depth**: Are there critical hire gaps (no CFO, no VP Sales, no CTO)?
+     Is the executive team experienced enough for the company's current stage?
    - Team capability and experience gaps
    - Technical execution complexity
-   - Go-to-market execution challenges
+   - **Go-to-Market Risk**: Is the sales model proven and scalable? Is the company
+     dependent on founder-led sales? Can the GTM scale beyond the current approach?
    - Operational scaling challenges
-   - Key person dependency
+   - Key person dependency — would the company be severely impacted if one person left?
 
 3. **Financial Risk**:
-   - Burn rate and runway concerns
-   - Revenue model validation
-   - Unit economics sustainability
+   - Burn rate and runway concerns — how many months of runway remain?
+   - Revenue model validation — is the revenue model proven?
+   - Unit economics sustainability — is LTV/CAC healthy and improving?
+   - **Customer Concentration Risk**: Is >30% of revenue from top 3 customers? If unknown, flag this.
+   - **Revenue Quality Risk**: Is revenue recurring or transactional? Are contracts long-term?
    - Funding dependency (will they need more capital?)
    - Currency/geographic financial risk
 
@@ -36,6 +41,13 @@ LOW / MEDIUM / HIGH / CRITICAL:
    - IP protection and patent risk
    - Data privacy and security requirements
    - Industry-specific legal considerations
+
+6. **Technology & Platform Risk**:
+   - **Platform Dependency**: Is the company dependent on a single platform (AWS, Salesforce,
+     Apple App Store, Google, etc.)? What happens if that platform changes terms or competes?
+   - Technical debt and architecture scalability
+   - Open-source dependency risks
+   - Data moat — does the company accumulate proprietary data that creates defensibility?
 
 5. **Exit Risk**:
    - Liquidity path clarity (IPO, M&A, secondary)

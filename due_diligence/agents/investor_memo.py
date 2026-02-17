@@ -41,16 +41,39 @@ Write a professional investment memo that includes:
    - Top 3-5 risks with mitigants
    - What could go wrong
 
-8. **Information Gaps & Open Questions**:
+8. **Value Creation Opportunities** (2-5 bullets):
+   - What can the investor DO to accelerate growth? Consider:
+     - Pricing optimization (is the company underpricing?)
+     - Market expansion (new geographies, new verticals, new customer segments)
+     - Operational efficiency (cost reduction, automation, better margins)
+     - Add-on acquisitions (smaller competitors, complementary products)
+     - Go-to-market improvements (hire VP Sales, expand channel partnerships)
+     - Product expansion (adjacent products, platform play)
+   - For each lever, estimate the potential impact (e.g., "Pricing optimization could
+     improve ARPU 20-30% based on competitive benchmarks")
+
+9. **Information Gaps & Open Questions**:
    - What data could NOT be verified through public research
    - What the investor should independently verify before committing capital
    - Suggested follow-up diligence steps (e.g., customer calls, audited financials request)
 
-9. **Investment Recommendation**:
+10. **Investment Recommendation**:
    - INVEST / PASS / MORE DILIGENCE NEEDED
    - Suggested terms (investment amount, target ownership)
    - Key conditions or milestones
    - Specific diligence items that must be completed before closing
+
+11. **Data Room Checklist** — List the specific documents the investor should request
+    from the company before proceeding to final diligence:
+    - Financial: Audited financials, monthly P&L (last 12-24 months), balance sheet,
+      cash flow statement, cap table, budget/forecast
+    - Commercial: Customer list with revenue by customer, contract samples, pipeline report,
+      churn/retention data by cohort, NPS/CSAT scores
+    - Legal: Corporate formation docs, IP assignments, material contracts, pending litigation,
+      employee agreements, stock option plan
+    - Technical: Architecture documentation, security audit results, uptime/SLA history
+    - HR: Org chart, compensation benchmarks, key employee retention agreements
+    - Mark which items are CRITICAL (must-have before closing) vs. NICE-TO-HAVE
 
 ## INTELLECTUAL HONESTY RULES (CRITICAL)
 

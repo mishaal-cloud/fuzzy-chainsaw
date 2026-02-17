@@ -552,6 +552,63 @@ a { color: var(--accent); text-decoration: none; }
     background: #fff;
 }
 
+/* ── Scope Section (What you get / What needs a human) ──── */
+
+.scope-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 40px;
+}
+
+.scope-card {
+    padding: 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.scope-card h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+}
+
+.scope-does h3 { color: var(--green); }
+.scope-doesnt h3 { color: var(--text-dim); }
+
+.scope-card ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scope-card li {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+}
+
+.scope-does li::before {
+    content: '\2713';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-weight: 700;
+}
+
+.scope-doesnt li::before {
+    content: '\2192';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -562,4 +619,5 @@ a { color: var(--accent); text-decoration: none; }
     .progress-view { padding: 30px 20px; }
     .results-view { padding: 20px; }
     .pipeline-viz { display: none; }
+    .scope-section { grid-template-columns: 1fr; }
 }
