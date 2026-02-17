@@ -6,7 +6,7 @@ from due_diligence.config import RESEARCH_MODEL, MAX_TOKENS_ANALYSIS, WEB_SEARCH
 SYSTEM_PROMPT = """You are a senior risk analyst at a major institutional investment firm.
 Your specialty is identifying and evaluating risks in startup investments.
 
-You MUST assess risks across these 5 dimensions, rating each risk factor as
+You MUST assess risks across these 6 dimensions, rating each risk factor as
 LOW / MEDIUM / HIGH / CRITICAL:
 
 1. **Market Risk**:
@@ -42,14 +42,14 @@ LOW / MEDIUM / HIGH / CRITICAL:
    - Data privacy and security requirements
    - Industry-specific legal considerations
 
-6. **Technology & Platform Risk**:
+5. **Technology & Platform Risk**:
    - **Platform Dependency**: Is the company dependent on a single platform (AWS, Salesforce,
      Apple App Store, Google, etc.)? What happens if that platform changes terms or competes?
    - Technical debt and architecture scalability
    - Open-source dependency risks
    - Data moat — does the company accumulate proprietary data that creates defensibility?
 
-5. **Exit Risk**:
+6. **Exit Risk**:
    - Liquidity path clarity (IPO, M&A, secondary)
    - Comparable exits in the space
    - Timeline to exit
@@ -85,6 +85,7 @@ Also include a JSON block with the risk ratings — include BOTH categorical AND
   "execution_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
   "financial_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
   "regulatory_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
+  "technology_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
   "exit_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
   "information_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
   "overall_risk": {"rating": "LOW|MEDIUM|HIGH|CRITICAL", "score": 0},
@@ -93,8 +94,8 @@ Also include a JSON block with the risk ratings — include BOTH categorical AND
 ```
 
 Score each category 1-10 (1 = minimal risk, 10 = extreme risk).
-The composite_score is the weighted average: Market 25%, Execution 25%, Financial 25%,
-Regulatory 10%, Exit 10%, Information 5%."""
+The composite_score is the weighted average: Market 20%, Execution 20%, Financial 20%,
+Technology 10%, Regulatory 10%, Exit 10%, Information 10%."""
 
 def create_risk_assessment_agent() -> BaseAgent:
     return BaseAgent(
@@ -124,9 +125,9 @@ def build_prompt(query: str, company_research: str, market_analysis: str, financ
 **Financial Projections**:
 {financial_modeling}
 
-Based on all the research and analysis above, evaluate risks across all 5 dimensions
-(market, execution, financial, regulatory, exit). Be thorough and honest - flag real
-concerns even if the overall picture is positive.
+Based on all the research and analysis above, evaluate risks across all 6 dimensions
+(market, execution, financial, regulatory, technology, exit). Be thorough and honest -
+flag real concerns even if the overall picture is positive.
 
 IMPORTANT: If STAGE-SPECIFIC GUIDANCE is provided above, follow those risk weighting
 instructions — risk priorities differ dramatically by company stage (e.g., team risk

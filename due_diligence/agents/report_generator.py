@@ -30,7 +30,7 @@ Structure the report as:
 6. **Financial Projections table (Bear/Base/Bull)** — Show ALL THREE scenarios prominently
    in a comparison table, NOT just the base case
 7. **Risk Assessment Dashboard** — Risk heat map as a styled grid with:
-   - 6 risk categories (Market, Execution, Financial, Regulatory, Exit, Information)
+   - 7 risk categories (Market, Execution, Financial, Regulatory, Technology, Exit, Information)
    - Color-coded severity (green/yellow/orange/red)
    - Numeric score per category (X/10)
    - Composite risk score displayed prominently

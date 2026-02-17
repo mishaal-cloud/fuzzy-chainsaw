@@ -30,7 +30,8 @@ The infographic MUST include:
 5. **Financial projection snapshot showing ALL 3 SCENARIOS** (Bear/Base/Bull Year 5 revenue
    as grouped bars or a comparison visual using CSS)
 6. **Risk Score Badge** — Large, prominent composite risk score (X.X/10) with a circular
-   gauge or progress ring visualization. Below it, show the 6 risk category mini-scores.
+   gauge or progress ring visualization. Below it, show the 7 risk category mini-scores
+   (Market, Execution, Financial, Regulatory, Technology, Exit, Information).
 7. Investment recommendation badge (INVEST / PASS / MORE DILIGENCE)
 8. Top 3 strengths and Top 3 risks as bullet points
 9. **Key Open Questions** — 2-3 critical items that need verification before investment
