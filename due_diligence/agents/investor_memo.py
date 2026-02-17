@@ -80,10 +80,15 @@ def build_prompt(
     market_analysis: str,
     financial_modeling: str,
     risk_assessment: str,
+    data_profile_block: str = "",
+    consistency_block: str = "",
 ) -> str:
     return f"""Write a professional investment memo synthesizing all prior analysis.
 
 **Original Query**: {query}
+
+{data_profile_block}
+{consistency_block}
 
 **Company Research**:
 {company_research}
@@ -98,4 +103,8 @@ def build_prompt(
 {risk_assessment}
 
 Synthesize everything above into a crisp, professional investment memo suitable for a
-partnership meeting at a top VC firm. Be direct with your recommendation."""
+partnership meeting at a top VC firm. Be direct with your recommendation.
+
+CRITICAL: The DATA AVAILABILITY PROFILE shows what is verified vs. missing. Your memo
+MUST reflect this reality. Do NOT upgrade estimated/missing data to stated facts.
+If any CONSISTENCY WARNINGS are shown above, address those issues in your memo."""

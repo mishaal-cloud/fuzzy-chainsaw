@@ -71,10 +71,15 @@ def build_prompt(
     financial_modeling: str,
     risk_assessment: str,
     investor_memo: str,
+    data_profile_block: str = "",
+    consistency_block: str = "",
 ) -> str:
     return f"""Generate a professional, McKinsey-quality HTML investment report.
 
 **Original Query**: {query}
+
+{data_profile_block}
+{consistency_block}
 
 **Company Research**:
 {company_research}
@@ -94,5 +99,9 @@ def build_prompt(
 Create a beautiful, self-contained HTML report that synthesizes all the above analysis.
 Include styled tables for financial data, a risk heat map, executive summary callout,
 and professional formatting throughout.
+
+CRITICAL: Use the DATA AVAILABILITY PROFILE to populate the Data Confidence Banner.
+Show the data tier ({data_profile_block[:50]}...) prominently. Use checkmark/warning/question
+icons to indicate verified/estimated/missing data throughout all tables.
 
 Output ONLY the complete HTML document, starting with <!DOCTYPE html>."""

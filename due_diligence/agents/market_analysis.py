@@ -63,10 +63,13 @@ def create_market_analysis_agent() -> BaseAgent:
     )
 
 
-def build_prompt(query: str, company_research: str) -> str:
+def build_prompt(query: str, company_research: str, data_profile_block: str = "", consistency_block: str = "") -> str:
     return f"""Conduct a comprehensive market analysis for an investment due diligence evaluation.
 
 **Target Company/Query**: {query}
+
+{data_profile_block}
+{consistency_block}
 
 **Company Research (from prior analysis)**:
 {company_research}

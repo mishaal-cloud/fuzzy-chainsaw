@@ -58,10 +58,15 @@ def build_prompt(
     financial_modeling: str,
     risk_assessment: str,
     investor_memo: str,
+    data_profile_block: str = "",
+    consistency_block: str = "",
 ) -> str:
     return f"""Create a visually stunning HTML/CSS infographic summarizing this investment analysis.
 
 **Original Query**: {query}
+
+{data_profile_block}
+{consistency_block}
 
 **Company Research**:
 {company_research}
@@ -80,5 +85,8 @@ def build_prompt(
 
 Design a single-page infographic that captures the essence of this investment opportunity
 at a glance. Focus on the most impactful data points and make it visually compelling.
+
+CRITICAL: Use the DATA AVAILABILITY PROFILE to set the Data Confidence badge color and label.
+Mark each metric card with a checkmark (verified) or warning icon (estimated/missing).
 
 Output ONLY the complete HTML document, starting with <!DOCTYPE html>."""

@@ -94,10 +94,13 @@ def create_risk_assessment_agent() -> BaseAgent:
     )
 
 
-def build_prompt(query: str, company_research: str, market_analysis: str, financial_modeling: str) -> str:
+def build_prompt(query: str, company_research: str, market_analysis: str, financial_modeling: str, data_profile_block: str = "", consistency_block: str = "") -> str:
     return f"""Conduct a comprehensive risk assessment for this investment opportunity.
 
 **Target Company/Query**: {query}
+
+{data_profile_block}
+{consistency_block}
 
 **Company Research**:
 {company_research}
@@ -111,5 +114,8 @@ def build_prompt(query: str, company_research: str, market_analysis: str, financ
 Based on all the research and analysis above, evaluate risks across all 5 dimensions
 (market, execution, financial, regulatory, exit). Be thorough and honest - flag real
 concerns even if the overall picture is positive.
+
+CRITICAL: The DATA AVAILABILITY PROFILE above shows what data is missing. Factor data
+scarcity into your Information Risk score — more [MISSING] fields = higher information risk.
 
 Include the structured JSON risk ratings block at the end."""
