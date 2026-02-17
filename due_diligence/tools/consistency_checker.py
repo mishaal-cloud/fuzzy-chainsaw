@@ -131,6 +131,27 @@ FIELD_CLAIM_PATTERNS = {
     ],
     "burn_rate": [
         (rf'(?:burn|burning)\s+{_DOLLAR}\s+(?:per\s+month|monthly|/month)', "warning"),
+        (rf'burn\s+rate\s+(?:of|is|was|at)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
+        (rf'monthly\s+(?:cash\s+)?burn\s+(?:of|is|was|at)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
+        (rf'(?:cash\s+)?burn\s+(?:of|is)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
+    ],
+    "cac": [
+        (rf'(?:CAC|customer acquisition cost)\s+(?:of|is|was|at)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
+        (rf'(?:costs?|spends?)\s+{_DOLLAR}\s+(?:to acquire|per (?:new )?customer)', "warning"),
+    ],
+    "ltv": [
+        (rf'(?:LTV|lifetime value|CLTV)\s+(?:of|is|was|at)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
+        (rf'(?:each|per|average)\s+customer\s+(?:is worth|generates)\s+{_DOLLAR}', "warning"),
+    ],
+    "churn": [
+        (r'(?:churn|attrition)\s+(?:rate\s+)?(?:of|is|was|at)\s+[\d.]+%', "warning"),
+        (r'[\d.]+%\s+(?:monthly|annual|yearly)\s+churn', "warning"),
+    ],
+    "ndr": [
+        (r'(?:NDR|net dollar retention|net revenue retention|NRR)\s+(?:of|is|was|at)\s+[\d.]+%', "warning"),
+    ],
+    "arpu": [
+        (rf'(?:ARPU|average revenue per user|average revenue per customer)\s+(?:of|is|was|at)\s+(?:approximately\s+)?{_DOLLAR}', "warning"),
     ],
 }
 
@@ -138,8 +159,10 @@ FIELD_CLAIM_PATTERNS = {
 ESTIMATE_INDICATORS = [
     r'\[ESTIMATE\]',
     r'\[MODELED\]',
+    r'\[MODELED ESTIMATE\]',
     r'\[ANALYST ESTIMATE\]',
     r'\[INDUSTRY BENCHMARK\]',
+    r'\[ILLUSTRATIVE',
     r'(?:our |we )?(?:estimate|model|project|assume)',
     r'modeled estimate',
     r'scenario (?:analysis|illustration)',
@@ -147,14 +170,29 @@ ESTIMATE_INDICATORS = [
     r'hypothetical',
     r'if we assume',
     r'based on (?:our |the )?(?:assumptions?|model)',
+    r'estimated at',
+    r'(?:we |our )?(?:model|estimate|project) (?:a |the )?',
 ]
 
 
 def _is_labeled_as_estimate(text: str, match_start: int, window: int = 200) -> bool:
-    """Check if a matched claim is properly labeled as an estimate."""
-    start = max(0, match_start - window)
-    end = min(len(text), match_start + window)
-    context = text[start:end]
+    """Check if a matched claim is properly labeled as an estimate.
+
+    Uses the CONTAINING LINE (not a character window) to prevent cross-contamination
+    between adjacent lines. Falls back to a small window if the line is very short.
+    """
+    # Find the line containing the match
+    line_start = text.rfind("\n", 0, match_start) + 1
+    line_end = text.find("\n", match_start)
+    if line_end == -1:
+        line_end = len(text)
+    context = text[line_start:line_end]
+
+    # If the line is very short, also check small window before/after
+    if len(context) < 40:
+        start = max(0, match_start - 80)
+        end = min(len(text), match_start + 80)
+        context = text[start:end]
 
     for indicator in ESTIMATE_INDICATORS:
         if re.search(indicator, context, re.IGNORECASE):
