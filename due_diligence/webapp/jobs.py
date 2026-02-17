@@ -26,7 +26,7 @@ STAGES = [
     (1, "Company Research", "Researching company background, team, funding, and traction..."),
     (2, "Market Analysis", "Analyzing market size, competition, and industry trends..."),
     (3, "Financial Modeling", "Building revenue projections and unit economics..."),
-    (4, "Risk Assessment", "Evaluating market, execution, financial, and regulatory risks..."),
+    (4, "Risk Assessment", "Evaluating market, execution, financial, technology, and regulatory risks..."),
     (5, "Investor Memo", "Writing professional investment thesis..."),
     (6, "Report Generation", "Creating detailed HTML investment report..."),
     (7, "Infographic", "Designing visual summary infographic..."),
