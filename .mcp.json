@@ -6,7 +6,10 @@
       "env": {
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
-        "DISABLE_CONSOLE_OUTPUT": "true"
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "https://mmurawala.app.n8n.cloud/api/v1",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MzM5OTU4NS00ODBiLTQ2NjEtOWFiOS1jMGI2NTYyNzM0ZTkiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMGI4Mjg4ZDUtOThlNy00NzU3LWJjOTktMzY0ZjMxOTZiMTJiIiwiaWF0IjoxNzcxMjc4Nzk0fQ.GnTPw6ht1S5hV5eCZxfSJo1wRy0ojt3peOIPEtu5eaY",
+        "N8N_MCP_API_KEY": "nmcp_fa69b587ced40e0cbdf93546ad9dda432c13664cef68c79fdd4d5bb5d4861989"
       }
     }
   }
