@@ -332,33 +332,27 @@ deploy_workflows() {
       new_id=$(echo "$response_body" | jq -r '.id')
       echo "[OK] Created workflow '$wf_name' (ID: $new_id)"
 
-      # FIX: Tag the workflow by GETting full workflow first, then PUTting with tags
+      # Tag via dedicated PUT /workflows/{id}/tags endpoint
+      # (tags is read-only on PUT /workflows/{id} — per OpenAPI spec)
       if [[ -n "$tag_name" ]]; then
         local tag_id
         tag_id=$(echo "$all_tags" | jq -r --arg t "$tag_name" '.[] | select(.name == $t) | .id')
 
         if [[ -n "$tag_id" ]]; then
-          # GET the full workflow, strip to PUT-accepted fields, add tags
-          local full_workflow
-          full_workflow=$(api_get "/workflows/$new_id")
+          local tag_body
+          tag_body=$(jq -n --arg tid "$tag_id" '[{"id": $tid}]')
 
-          if [[ -n "$full_workflow" ]]; then
-            local updated_body
-            updated_body=$(echo "$full_workflow" | jq --arg tid "$tag_id" --arg tname "$tag_name" \
-              '{name, nodes, connections, settings, staticData, active} + {tags: [{"id": $tid, "name": $tname}]}')
+          local tag_response
+          tag_response=$(api_put_verbose "/workflows/$new_id/tags" "$tag_body")
+          local tag_status="${tag_response%%|*}"
 
-            local tag_response
-            tag_response=$(api_put_verbose "/workflows/$new_id" "$updated_body")
-            local tag_status="${tag_response%%|*}"
-
-            if [[ "$tag_status" -ge 200 && "$tag_status" -lt 300 ]]; then
-              echo "[OK]   Tagged with '$tag_name'"
-            else
-              local tag_error="${tag_response#*|}"
-              echo "[WARN]   Failed to tag with '$tag_name'"
-              echo "[ERROR] HTTP $tag_status from PUT /workflows/$new_id"
-              echo "[ERROR] Response: $tag_error"
-            fi
+          if [[ "$tag_status" -ge 200 && "$tag_status" -lt 300 ]]; then
+            echo "[OK]   Tagged with '$tag_name'"
+          else
+            local tag_error="${tag_response#*|}"
+            echo "[WARN]   Failed to tag with '$tag_name'"
+            echo "[ERROR] HTTP $tag_status from PUT /workflows/$new_id/tags"
+            echo "[ERROR] Response: $tag_error"
           fi
         fi
       fi

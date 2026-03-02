@@ -248,18 +248,12 @@ while read -r wf; do
     continue
   fi
 
-  # Tag via PUT (active is read-only — must use separate activate/deactivate endpoints)
+  # Tag via dedicated PUT /workflows/{id}/tags endpoint
+  # (tags is read-only on PUT /workflows/{id} — per OpenAPI spec)
   if $needs_tag; then
-    full_wf=$(api_get "/workflows/$wf_id") || {
-      echo "    [WARN] Failed to fetch full workflow, skipping"
-      continue
-    }
+    tag_body=$(jq -n --arg tid "$target_tag_id" '[{"id": $tid}]')
 
-    # Strip to PUT-accepted fields only (no active — it's read-only)
-    updated_wf=$(echo "$full_wf" | jq --arg tid "$target_tag_id" --arg tname "$target_tag_name" \
-      '{name, nodes, connections, settings, staticData} + {tags: [{"id": $tid, "name": $tname}]}')
-
-    response=$(api_put "/workflows/$wf_id" "$updated_wf")
+    response=$(api_put "/workflows/$wf_id/tags" "$tag_body")
     http_status=$(echo "$response" | tail -1)
     response_body=$(echo "$response" | sed '$d')
 
@@ -267,8 +261,7 @@ while read -r wf; do
       echo "    [OK] Tagged: $target_tag_name"
       ((tagged++)) || true
     else
-      echo "    [ERROR] Tag failed: HTTP $http_status"
-      echo "    $response_body" | head -1
+      echo "    [ERROR] Tag failed: HTTP $http_status — $response_body"
     fi
   fi
 
@@ -278,7 +271,7 @@ while read -r wf; do
       echo "    [OK] Activated"
       ((activated++)) || true
     else
-      echo "    [WARN] Failed to activate"
+      echo "    [WARN] Failed to activate (may only have manual triggers)"
     fi
   elif $needs_deactivate; then
     if api_post "/workflows/$wf_id/deactivate" '{}' >/dev/null 2>&1; then
