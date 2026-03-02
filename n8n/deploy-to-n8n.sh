@@ -65,13 +65,37 @@ ACTIVATE_PATTERNS=(
     "testing/smoke-tests"
 )
 
-# Map directory names to tag names
-declare -A DIR_TO_TAG=(
-    ["gateways"]="Gateway"
-    ["infrastructure"]="Infrastructure"
-    ["monitoring"]="Monitoring"
-    ["testing"]="Testing"
-)
+# Map directory names to tag names (bash 3.2 compatible — no associative arrays)
+dir_to_tag() {
+    case "$1" in
+        gateways)       echo "Gateway" ;;
+        infrastructure) echo "Infrastructure" ;;
+        monitoring)     echo "Monitoring" ;;
+        testing)        echo "Testing" ;;
+        *)              echo "" ;;
+    esac
+}
+
+# Tag ID storage (bash 3.2 compatible — parallel arrays instead of assoc array)
+TAG_NAMES_LIST=()
+TAG_IDS_LIST=()
+
+set_tag_id() {
+    TAG_NAMES_LIST+=("$1")
+    TAG_IDS_LIST+=("$2")
+}
+
+get_tag_id() {
+    local i=0
+    for name in "${TAG_NAMES_LIST[@]}"; do
+        if [ "$name" = "$1" ]; then
+            echo "${TAG_IDS_LIST[$i]}"
+            return 0
+        fi
+        i=$((i + 1))
+    done
+    echo ""
+}
 
 # ==============================================================================
 # Helper Functions
@@ -295,12 +319,15 @@ build_tag_map() {
         return 1
     }
 
-    # Declare global associative array for tag IDs
-    declare -gA TAG_IDS
+    # Reset tag ID storage
+    TAG_NAMES_LIST=()
+    TAG_IDS_LIST=()
 
     if $HAS_JQ; then
         while IFS='|' read -r name id; do
-            TAG_IDS["$name"]="$id"
+            if [ -n "$name" ] && [ -n "$id" ]; then
+                set_tag_id "$name" "$id"
+            fi
         done < <(echo "$tags_response" | jq -r '.data[]? | "\(.name)|\(.id)"' 2>/dev/null)
     else
         # Fallback: parse manually (best effort)
@@ -311,7 +338,7 @@ build_tag_map() {
             name=$(echo "$entry" | sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
             id=$(echo "$entry" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\{0,1\}\([^,"}\]*\)\"\{0,1\}.*/\1/p')
             if [ -n "$name" ] && [ -n "$id" ]; then
-                TAG_IDS["$name"]="$id"
+                set_tag_id "$name" "$id"
             fi
         done <<< "$entries"
     fi
@@ -359,7 +386,7 @@ get_tag_for_workflow() {
     local filepath="$1"
     local dir_name
     dir_name=$(basename "$(dirname "$filepath")")
-    echo "${DIR_TO_TAG[$dir_name]:-}"
+    dir_to_tag "$dir_name"
 }
 
 # Step 2: Deploy all workflow JSON files
@@ -440,8 +467,10 @@ deploy_workflows() {
             # Assign tag if applicable
             local tag_name
             tag_name=$(get_tag_for_workflow "$workflow_file")
-            if [ -n "$tag_name" ] && [ -n "${TAG_IDS[$tag_name]:-}" ]; then
-                local tag_id="${TAG_IDS[$tag_name]}"
+            local tag_id_val
+            tag_id_val=$(get_tag_id "$tag_name")
+            if [ -n "$tag_name" ] && [ -n "$tag_id_val" ]; then
+                local tag_id="$tag_id_val"
                 # Update workflow with tag
                 local tag_update
                 if tag_update=$(n8n_api PUT "/workflows/${workflow_id}" \
