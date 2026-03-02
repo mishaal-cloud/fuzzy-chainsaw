@@ -226,6 +226,118 @@
       "burst_allowance": 50,
       "retry_after_seconds": 5,
       "throttle_strategy": "token_bucket"
+    },
+    "gong": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "apollo_io": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "youtube": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "azure_openai": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "google_gemini": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "perplexity": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "linkedin_community": {
+      "requests_per_minute": 80,
+      "daily_quota": 100000,
+      "burst_allowance": 8,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "microsoft_graph": {
+      "requests_per_minute": 120,
+      "daily_quota": 100000,
+      "burst_allowance": 12,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "sliding_window"
+    },
+    "microsoft_outlook": {
+      "requests_per_minute": 120,
+      "daily_quota": 100000,
+      "burst_allowance": 12,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "sliding_window"
+    },
+    "wordpress": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "fred": {
+      "requests_per_minute": 120,
+      "daily_quota": 500000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "sliding_window"
+    },
+    "census": {
+      "requests_per_minute": 60,
+      "daily_quota": 500000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "financial_modeling_prep": {
+      "requests_per_minute": 300,
+      "daily_quota": 250,
+      "burst_allowance": 10,
+      "retry_after_seconds": 5,
+      "throttle_strategy": "token_bucket"
+    },
+    "newsapi_ai": {
+      "requests_per_minute": 60,
+      "daily_quota": 2000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "microsoft_clarity": {
+      "requests_per_minute": 30,
+      "daily_quota": 10000,
+      "burst_allowance": 3,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "quickbooks": {
+      "requests_per_minute": 500,
+      "daily_quota": 500000,
+      "burst_allowance": 50,
+      "retry_after_seconds": 5,
+      "throttle_strategy": "token_bucket"
     }
   },
   "global": {

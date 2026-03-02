@@ -132,48 +132,73 @@ X-API-KEY: <gateway-api-key>
 
 ---
 
-## Available API Categories
+## Available APIs — Full Status (45 APIs across 12 categories)
 
-### Marketing & Ads
-| API | Key Name | Example Actions |
-|-----|----------|----------------|
-| Google Ads | `google_ads` | campaigns, ad_groups, keywords, metrics, budget |
-| Meta/Facebook Ads | `meta_ads` | campaigns, adsets, ads, insights, audiences |
-| LinkedIn Ads | `linkedin_ads` | campaigns, creatives, analytics, audiences |
-| TikTok Ads | `tiktok_ads` | campaigns, ad_groups, ads, reports |
+### WORKING NOW (20 n8n credentials + 8 env keys + 3 free = 31 ready)
 
-### CRM
-| API | Key Name | Example Actions |
-|-----|----------|----------------|
-| HubSpot | `hubspot` | contacts, companies, deals, tickets, pipelines |
-| Salesforce | `salesforce` | leads, opportunities, accounts, contacts, reports |
-| Pipedrive | `pipedrive` | deals, persons, organizations, activities, pipelines |
+| API | Status | Auth | Key Name |
+|-----|--------|------|----------|
+| Google Ads | CONNECTED | OAuth2 | `google_ads` |
+| Google Analytics 4 | CONNECTED | OAuth2 | `ga4` |
+| Google Search Console | CONNECTED | OAuth2 | `search_console` |
+| Google Sheets | CONNECTED | OAuth2 | `sheets` |
+| Gmail | CONNECTED | OAuth2 | `gmail` |
+| Google Calendar | CONNECTED | OAuth2 | `calendar` |
+| YouTube | CONNECTED | OAuth2 | `youtube` |
+| HubSpot | CONNECTED | App Token | `hubspot` |
+| Salesforce (Ascend GTM) | CONNECTED | OAuth2 | `salesforce` |
+| Salesforce (Kahuna Prod) | CONNECTED | OAuth2 | `salesforce_kahuna_prod` |
+| Microsoft Graph (Teams/OneDrive/SharePoint) | CONNECTED | OAuth2 | `microsoft_graph` |
+| Microsoft Outlook | CONNECTED | OAuth2 | `microsoft_outlook` |
+| Slack | CONNECTED | OAuth2 | `slack` |
+| Apollo.io | CONNECTED | HTTP Header | `apollo_io` |
+| LinkedIn Community | CONNECTED | OAuth2 | `linkedin_community` |
+| OpenAI | CONNECTED | API Key | `openai` |
+| Azure OpenAI | CONNECTED | API Key | `azure_openai` |
+| Google Gemini | CONNECTED | API Key | `google_gemini` |
+| Perplexity AI | CONNECTED | HTTP Header | `perplexity` |
+| WordPress (Kahuna) | CONNECTED | App Password | `wordpress` |
+| SMTP | CONNECTED | SMTP | `smtp` |
+| SEMrush | ENV_KEY | API Key (.env) | `semrush` |
+| Gong | ENV_KEY | API Key (.env) | `gong` |
+| Microsoft Clarity | ENV_KEY | API Key (.env) | `microsoft_clarity` |
+| FRED | ENV_KEY | API Key (.env) | `fred` |
+| Census Bureau | ENV_KEY | API Key (.env) | `census` |
+| Financial Modeling Prep | ENV_KEY | API Key (.env) | `financial_modeling_prep` |
+| NewsAPI.ai | ENV_KEY | API Key (.env) | `newsapi_ai` |
+| QuickBooks | ENV_KEY | OAuth2 (.env) | `quickbooks` |
+| SEC EDGAR | FREE | None | `sec_edgar` |
+| Crossref | FREE | None | `crossref` |
+| World Bank | FREE | None | `world_bank` |
 
-### Analytics
-| API | Key Name | Example Actions |
-|-----|----------|----------------|
-| Google Analytics 4 | `ga4` | report, realtime, audiences, conversions |
-| Google Search Console | `search_console` | performance, sitemaps, url_inspection |
+### NOT CONFIGURED (14 APIs — need credentials if you want to use them)
 
-### Google Suite
-| API | Key Name | Example Actions |
-|-----|----------|----------------|
-| Gmail | `gmail` | send, search, read, labels, drafts |
-| Google Calendar | `google_calendar` | events, create_event, calendars, free_busy |
-| Google Drive | `google_drive` | files, upload, download, share, search |
-| Google Sheets | `google_sheets` | read, write, append, create, sheets |
+| API | What's Needed |
+|-----|---------------|
+| Meta/Facebook Ads | Facebook Business Manager OAuth2 in n8n |
+| LinkedIn Ads | LinkedIn Campaign Manager OAuth2 in n8n |
+| TikTok Ads | TikTok Business Center access token |
+| Twitter/X Ads | Twitter/X Ads API OAuth2 in n8n |
+| Pipedrive | Pipedrive API token |
+| Mixpanel | Mixpanel service account |
+| Hotjar | Hotjar API key |
+| Google Drive | Google Drive OAuth2 (may share with Sheets) |
+| SendGrid | SendGrid API key |
+| Twilio | Twilio Account SID + Auth Token |
+| Anthropic (n8n) | Anthropic API key in n8n credential |
+| Airtable | Airtable personal access token |
+| Shopify | Shopify custom app access token |
+| Stripe | Stripe restricted API key |
 
-### Additional APIs (20+)
-- **Social Media:** Twitter/X, Instagram, YouTube
-- **Project Management:** Jira, Asana, Monday.com, Notion
-- **Communication:** Slack, Microsoft Teams, Discord
-- **Email Marketing:** Mailchimp, SendGrid, Klaviyo
-- **E-Commerce:** Shopify, Stripe, WooCommerce
-- **Developer Tools:** GitHub, GitLab, Bitbucket
-- **Cloud:** AWS, GCP, Azure (select services)
+### PENDING VERIFICATION (5)
+- **BLS:** Registration submitted — CAPTCHA completion needed
+- **Semantic Scholar:** API key request submitted — reCAPTCHA needed
+- **Reddit:** API access request submitted — pending approval
+- **Visualping:** Account created — pending email verification
+- **Growjo:** Contact form submitted — awaiting response
 
-> **Tip:** Always call the `/webhook/api-discovery` endpoint for the authoritative, real-time
-> list of available APIs and their exact parameter schemas.
+> **Full details:** See `n8n/config/api-registry.json` for exact endpoints, rate limits,
+> and credential IDs for all 45 APIs.
 
 ---
 
@@ -318,8 +343,14 @@ Read them from the files below.**
 |------|------|-----------|
 | All API keys & secrets | `.env` (project root) | NO — gitignored |
 | All n8n credential IDs, property IDs, URLs | `n8n/config/project-config.json` | YES |
-| n8n API registry (30+ APIs) | `n8n/config/api-registry.json` | YES |
-| n8n credential rotation policy | `n8n/config/credential-inventory.json` | YES |
+| Full API registry (45 APIs with status) | `n8n/config/api-registry.json` | YES |
+| n8n credential audit + gap analysis | `n8n/config/credential-inventory.json` | YES |
+
+### Multi-client support:
+
+`project-config.json` supports multiple clients. Current active client: **kahuna**.
+To add a new client, copy the `kahuna` block in the `clients` section, change the `client_id`,
+fill in the new client's IDs/URLs, then set `active_client` to switch contexts.
 
 ### Key values (from project-config.json — DO NOT ASK FOR THESE):
 
@@ -362,7 +393,7 @@ Read them from the files below.**
 ### Deployment — ONE command, zero manual steps:
 
 ```bash
-cd n8n && ./deploy-to-n8n.sh
+cd ~/Documents/GitHub/fuzzy-chainsaw && ./n8n/deploy-to-n8n.sh
 ```
 
 This script:
@@ -373,6 +404,7 @@ This script:
 5. Tags them
 
 **NEVER tell the user to manually add variables in the n8n UI or look up property IDs.**
+**ALWAYS use full absolute paths in commands (e.g. `cd ~/Documents/GitHub/fuzzy-chainsaw && ...`).**
 
 ---
 
@@ -488,3 +520,9 @@ Currently configured to post to the **#n8n.cloud** channel in the **Ascendgtm** 
    routing. Deploying a second one causes webhook path conflicts.
 8. **Credential issues = tell the user.** If a health check shows `credential_expired`,
    inform the user immediately. Do not retry — it won't work until re-authenticated.
+9. **Always use full absolute paths.** When giving the user shell commands, always use full
+   directory paths: `cd ~/Documents/GitHub/fuzzy-chainsaw && ...`. Never use relative paths.
+10. **NEVER commit secrets to git.** All API keys, tokens, passwords, and high-entropy secrets
+    belong in `.env` only. n8n credential IDs (like `euQhyKgs68cdwZvF`) are safe to commit —
+    they are internal database identifiers, not secrets. But actual keys/tokens/passwords must
+    ONLY be in `.env` (gitignored).
