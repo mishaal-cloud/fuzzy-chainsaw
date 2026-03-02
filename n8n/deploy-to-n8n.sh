@@ -203,7 +203,11 @@ n8n_api() {
     tmpfile=$(mktemp)
 
     # Make the request, capture HTTP status code separately
+    # --connect-timeout 10: fail fast if can't reach host
+    # --max-time 30: never hang more than 30s per request
     http_code=$(curl -s -o "$tmpfile" -w "%{http_code}" \
+        --connect-timeout 10 \
+        --max-time 30 \
         -X "$method" \
         -H "X-N8N-API-KEY: ${N8N_API_KEY}" \
         -H "Content-Type: application/json" \

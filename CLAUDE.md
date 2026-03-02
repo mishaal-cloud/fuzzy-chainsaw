@@ -171,7 +171,7 @@ X-API-KEY: <gateway-api-key>
 | Crossref | FREE | None | `crossref` |
 | World Bank | FREE | None | `world_bank` |
 
-### NOT CONFIGURED (14 APIs — need credentials if you want to use them)
+### NOT CONFIGURED (10 APIs — need credentials if you want to use them)
 
 | API | What's Needed |
 |-----|---------------|
@@ -179,14 +179,10 @@ X-API-KEY: <gateway-api-key>
 | LinkedIn Ads | LinkedIn Campaign Manager OAuth2 in n8n |
 | TikTok Ads | TikTok Business Center access token |
 | Twitter/X Ads | Twitter/X Ads API OAuth2 in n8n |
-| Pipedrive | Pipedrive API token |
-| Mixpanel | Mixpanel service account |
 | Hotjar | Hotjar API key |
 | Google Drive | Google Drive OAuth2 (may share with Sheets) |
-| SendGrid | SendGrid API key |
 | Twilio | Twilio Account SID + Auth Token |
 | Anthropic (n8n) | Anthropic API key in n8n credential |
-| Airtable | Airtable personal access token |
 | Shopify | Shopify custom app access token |
 | Stripe | Stripe restricted API key |
 

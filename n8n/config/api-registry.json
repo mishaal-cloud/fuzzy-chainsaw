@@ -139,19 +139,6 @@
         "documentation": "https://apolloio.github.io/apollo-api-docs/",
         "timeout_ms": 15000
       },
-      "pipedrive": {
-        "name": "Pipedrive",
-        "base_url": "https://api.pipedrive.com/v1",
-        "auth_type": "api_key",
-        "n8n_credential_id": null,
-        "status": "not_configured",
-        "what_needed": "Pipedrive API token",
-        "rate_limits": { "requests_per_second": 10, "daily_quota": 100000 },
-        "required_params": [],
-        "actions": ["deals", "persons", "organizations", "activities", "create_deal", "create_person"],
-        "documentation": "https://developers.pipedrive.com/docs/api/v1",
-        "timeout_ms": 15000
-      }
     },
 
     "analytics": {
@@ -211,19 +198,6 @@
         "actions": ["heatmaps", "sessions", "metrics"],
         "documentation": "https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-api",
         "timeout_ms": 15000
-      },
-      "mixpanel": {
-        "name": "Mixpanel",
-        "base_url": "https://mixpanel.com/api/2.0",
-        "auth_type": "api_key",
-        "n8n_credential_id": null,
-        "status": "not_configured",
-        "what_needed": "Mixpanel service account",
-        "rate_limits": { "requests_per_minute": 60, "daily_quota": 50000 },
-        "required_params": ["project_id"],
-        "actions": ["events", "funnels", "retention", "export"],
-        "documentation": "https://developer.mixpanel.com/reference/overview",
-        "timeout_ms": 30000
       },
       "hotjar": {
         "name": "Hotjar",
@@ -377,19 +351,6 @@
         "rate_limits": { "requests_per_minute": 30 },
         "required_params": ["to", "subject", "body"],
         "actions": ["send_email"],
-        "timeout_ms": 15000
-      },
-      "sendgrid": {
-        "name": "SendGrid",
-        "base_url": "https://api.sendgrid.com/v3",
-        "auth_type": "api_key",
-        "n8n_credential_id": null,
-        "status": "not_configured",
-        "what_needed": "SendGrid API key",
-        "rate_limits": { "requests_per_second": 10, "daily_quota": 100000 },
-        "required_params": [],
-        "actions": ["send_email", "templates", "contacts", "lists", "stats"],
-        "documentation": "https://docs.sendgrid.com/api-reference",
         "timeout_ms": 15000
       },
       "twilio": {
@@ -722,29 +683,16 @@
         "documentation": "https://supabase.com/docs/guides/api",
         "timeout_ms": 15000
       },
-      "airtable": {
-        "name": "Airtable",
-        "base_url": "https://api.airtable.com/v0",
-        "auth_type": "api_key",
-        "n8n_credential_id": null,
-        "status": "not_configured",
-        "what_needed": "Airtable personal access token",
-        "rate_limits": { "requests_per_second": 5, "daily_quota": 100000 },
-        "required_params": ["base_id"],
-        "actions": ["list_records", "create_record", "update_record", "delete_record"],
-        "documentation": "https://airtable.com/developers/web/api/introduction",
-        "timeout_ms": 15000
-      }
     }
   },
 
   "metadata": {
-    "total_apis": 45,
-    "total_categories": 12,
+    "total_apis": 41,
+    "total_categories": 11,
     "connected_count": 20,
     "env_key_count": 8,
     "free_count": 3,
-    "not_configured_count": 14,
+    "not_configured_count": 10,
     "supported_auth_types": ["oauth2", "api_key", "app_token", "http_header", "smtp", "none"],
     "default_timeout_ms": 30000,
     "default_retry_attempts": 3,
