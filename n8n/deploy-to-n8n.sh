@@ -474,7 +474,7 @@ deploy_workflows() {
                 # Update workflow with tag
                 local tag_update
                 if tag_update=$(n8n_api PUT "/workflows/${workflow_id}" \
-                    -d "{\"tags\": [{\"id\": \"${tag_id}\", \"name\": \"${tag_name}\"}]}"); then
+                    -d "{\"name\": \"${workflow_name}\", \"tags\": [{\"id\": \"${tag_id}\", \"name\": \"${tag_name}\"}]}"); then
                     log_info "  Tagged with '${tag_name}'"
                 else
                     log_warn "  Failed to tag with '${tag_name}'"
