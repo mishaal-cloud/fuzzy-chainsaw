@@ -138,7 +138,7 @@
         "actions": ["people_search", "people_enrich", "organizations", "contacts", "sequences"],
         "documentation": "https://apolloio.github.io/apollo-api-docs/",
         "timeout_ms": 15000
-      },
+      }
     },
 
     "analytics": {
@@ -682,7 +682,7 @@
         "actions": ["select", "insert", "update", "delete", "rpc"],
         "documentation": "https://supabase.com/docs/guides/api",
         "timeout_ms": 15000
-      },
+      }
     }
   },
 
