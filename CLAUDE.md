@@ -256,10 +256,10 @@ The n8n layer follows a modular enterprise architecture (defined in `n8n/IMPLEME
 n8n/
 ├── workflows/
 │   ├── gateways/           # API routing workflows
-│   │   ├── main-api-gateway.json
+│   │   ├── api-discovery.json
 │   │   ├── marketing-ads-gateway.json
 │   │   ├── crm-gateway.json
-│   │   ├── analytics-gateway.json
+│   │   ├── analytics-gateway.json (includes SEMrush)
 │   │   └── google-suite-gateway.json
 │   ├── infrastructure/     # Core services
 │   │   ├── error-handler.json
@@ -271,13 +271,22 @@ n8n/
 │   │   ├── metrics-collector.json
 │   │   ├── alert-manager.json
 │   │   └── daily-summary.json
+│   ├── seo-pipeline/       # SEO optimization for kahunaworkforce.com
+│   │   ├── seo-pipeline-master.json    # Orchestrator — run any step
+│   │   ├── seo-data-collection.json    # GA4 + GSC + SEMrush data pull
+│   │   ├── seo-content-optimizer.json  # Claude rewrite + keyword intent matching
+│   │   └── seo-monitoring.json         # Daily position tracking + weekly site audit
 │   └── testing/            # Quality assurance
 │       ├── test-runner.json
 │       └── smoke-tests.json
 ├── schemas/                # OpenAPI spec, validation schemas
-├── config/                 # Rate limits, credential inventory, API registry
+├── config/
+│   ├── project-config.json # ★ SINGLE SOURCE OF TRUTH — all IDs, URLs, credential refs
+│   ├── api-registry.json   # 31 APIs registered (includes SEMrush)
+│   ├── credential-inventory.json
+│   └── rate-limits.json
 ├── docs/                   # Architecture docs and runbooks
-└── deploy-to-n8n.sh       # One-command deployment script
+└── deploy-to-n8n.sh       # One-command deployment (auto-loads .env, syncs variables)
 ```
 
 ---
@@ -298,11 +307,97 @@ n8n/
 
 ---
 
+## CRITICAL: Project Configuration — NEVER ASK FOR THESE VALUES
+
+**All configuration is persisted. Do NOT ask the user for API keys, property IDs, or credential IDs.
+Read them from the files below.**
+
+### Where everything lives:
+
+| What | File | Committed? |
+|------|------|-----------|
+| All API keys & secrets | `.env` (project root) | NO — gitignored |
+| All n8n credential IDs, property IDs, URLs | `n8n/config/project-config.json` | YES |
+| n8n API registry (30+ APIs) | `n8n/config/api-registry.json` | YES |
+| n8n credential rotation policy | `n8n/config/credential-inventory.json` | YES |
+
+### Key values (from project-config.json — DO NOT ASK FOR THESE):
+
+| Value | Location |
+|-------|----------|
+| **Domain** | `kahunaworkforce.com` |
+| **GA4 Property ID** | `273714189` |
+| **GA4 Account ID** | `106559456` |
+| **GSC Site URL** | `sc-domain:kahunaworkforce.com` |
+| **Google Ads Customer ID** | `4320252036` |
+| **Google Ads Login Customer ID** | `7980471764` |
+| **SEMrush API Key** | In `.env` as `SEMRUSH_API_KEY` |
+| **Alert Email** | `mishaal12000@gmail.com` |
+
+### n8n Credential IDs (already configured in n8n UI — reference only):
+
+| Service | n8n Credential ID |
+|---------|-------------------|
+| Google Ads OAuth2 | `euQhyKgs68cdwZvF` |
+| Google Analytics OAuth2 | `cYYciNg6xMKkfDMS` |
+| Google Sheets OAuth2 | `oUDxAs0PlSvP3n9e` |
+| Gmail OAuth2 | `0qXbdYRtwneXvwEO` |
+| Google Calendar OAuth2 | `YBOTpjWlWA1UhvaV` |
+| HubSpot (Kahuna Prod) | `n897XkdylqY96hx8` |
+| Salesforce OAuth2 | `WlkDj04MLYU1SyVD` |
+| Salesforce (Kahuna Prod) | `ABbOdZjXtx2J8mDv` |
+| Microsoft Graph OAuth2 | `z23FXnEJjnjbuInH` |
+| Microsoft Outlook OAuth2 | `Lu7gp8pIUhM6b8G2` |
+| Slack OAuth2 | `Td6a13CD9P2O5K2U` |
+| Apollo.io | `AFIHmkvz3sIS1Bsu` |
+| LinkedIn Community | `hM6JaaSBePWuzl6y` |
+| Azure OpenAI | `EAHLPCcfWwtUgIbD` |
+| SMTP | `gaDwb35iC3dImmKu` |
+| OpenAI | `BPsL1P1JIsxrhA64` |
+| Google Gemini | `gFUoNWMqYRabWDai` |
+| YouTube OAuth2 | `53ZQcqJt7zddcm3P` |
+| Perplexity | `RubShqStvGuK97fO` |
+| WordPress (Kahuna) | `jIBRhrEDzCgVi5ru` |
+
+### Deployment — ONE command, zero manual steps:
+
+```bash
+cd n8n && ./deploy-to-n8n.sh
+```
+
+This script:
+1. Auto-loads `.env` (no arguments needed)
+2. Syncs all variables to n8n (SEMRUSH_API_KEY, GA4_PROPERTY_ID, etc.)
+3. Deploys all workflows
+4. Activates them
+5. Tags them
+
+**NEVER tell the user to manually add variables in the n8n UI or look up property IDs.**
+
+---
+
 ## Environment Variables
+
+All environment variables are in `.env` (project root, gitignored). Key ones:
 
 | Variable | Purpose |
 |----------|---------|
 | `N8N_API_KEY` | n8n instance management API key (header: `X-N8N-API-KEY`) |
+| `N8N_INSTANCE_URL` | n8n Cloud URL |
+| `SEMRUSH_API_KEY` | SEMrush API for SEO pipeline |
+| `GA4_PROPERTY_ID` | Google Analytics 4 property for kahunaworkforce.com |
+| `GSC_SITE_URL` | Google Search Console site identifier |
+| `GOOGLE_ADS_CUSTOMER_ID` | Google Ads customer account |
+| `GOOGLE_ADS_DEVELOPER_TOKEN` | Google Ads API developer token |
+| `APOLLO_API_KEY` | Apollo.io for prospecting |
+| `GONG_ACCESS_KEY` | Gong API access key |
+| `GONG_CLIENT_SECRET` | Gong API client secret |
+| `FRED_API_KEY` | Federal Reserve Economic Data |
+| `CENSUS_API_KEY` | US Census Bureau |
+| `FMP_API_KEY` | Financial Modeling Prep |
+| `NEWSAPI_AI_KEY` | NewsAPI.ai |
+| `CLARITY_API_TOKEN` | Microsoft Clarity |
+| `ALERT_EMAIL` | Email for monitoring alerts |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key for due diligence agents |
 | `ADMIN_SECRET` | Admin secret for `/admin/create-key` endpoint |
 | `RESEARCH_MODEL` | Model for research agents (default: `claude-sonnet-4-20250514`) |

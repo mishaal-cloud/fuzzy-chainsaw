@@ -1,0 +1,127 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-02",
+  "description": "Single source of truth for all project configuration. Non-secret IDs and URLs only — actual API keys live in .env (gitignored).",
+
+  "domain": {
+    "primary": "kahunaworkforce.com",
+    "production_url": "https://kahunaworkforce.com",
+    "staging_url": "https://kahunastaging.wpengine.com",
+    "dev_url": "https://kahunaworkdev.wpengine.com"
+  },
+
+  "n8n": {
+    "instance_url": "https://mmurawala.app.n8n.cloud",
+    "api_base": "https://mmurawala.app.n8n.cloud/api/v1",
+    "webhook_base": "https://mmurawala.app.n8n.cloud/webhook",
+    "mcp_key_id": "nmcp_fa69b587ced40e0cbdf93546ad9dda432c13664cef68c79fdd4d5bb5d4861989"
+  },
+
+  "google": {
+    "ga4_property_id": "273714189",
+    "search_console_site_url": "sc-domain:kahunaworkforce.com",
+    "ads_customer_id": "4320252036",
+    "ads_login_customer_id": "7980471764",
+    "gcp_service_account_key_file": "~/.gcp-keys/client-gtm-stack-3acd80cf851f.json"
+  },
+
+  "n8n_credentials": {
+    "_comment": "These are n8n credential IDs — the actual secrets are stored inside n8n, not here.",
+    "google_ads_oauth2": "euQhyKgs68cdwZvF",
+    "google_analytics_oauth2": "cYYciNg6xMKkfDMS",
+    "google_sheets_oauth2": "oUDxAs0PlSvP3n9e",
+    "gmail_oauth2": "0qXbdYRtwneXvwEO",
+    "google_calendar_oauth2": "YBOTpjWlWA1UhvaV",
+    "hubspot_app_token": "n897XkdylqY96hx8",
+    "salesforce_oauth2": "WlkDj04MLYU1SyVD",
+    "salesforce_kahuna_prod": "ABbOdZjXtx2J8mDv",
+    "microsoft_oauth2": "z23FXnEJjnjbuInH",
+    "microsoft_outlook_oauth2": "Lu7gp8pIUhM6b8G2",
+    "slack_oauth2": "Td6a13CD9P2O5K2U",
+    "apollo_io": "AFIHmkvz3sIS1Bsu",
+    "linkedin_community": "hM6JaaSBePWuzl6y",
+    "azure_openai": "EAHLPCcfWwtUgIbD",
+    "smtp": "gaDwb35iC3dImmKu",
+    "openai": "BPsL1P1JIsxrhA64",
+    "google_gemini": "gFUoNWMqYRabWDai",
+    "youtube_oauth2": "53ZQcqJt7zddcm3P",
+    "perplexity": "RubShqStvGuK97fO",
+    "wordpress_kahuna": "jIBRhrEDzCgVi5ru"
+  },
+
+  "salesforce": {
+    "instance_url": "https://orgfarm-83ac2adc8b-dev-ed.develop.my.salesforce.com",
+    "app_name": "Ascend GTM API",
+    "environment": "production"
+  },
+
+  "microsoft": {
+    "tenant_id": "07601d11-2373-41d1-9e87-3a526e8773f1",
+    "app_name": "n8n Ascend GTM Integration",
+    "client_secret_expires": "2028-02-19"
+  },
+
+  "hubspot": {
+    "account_name": "Kahuna Workforce Solutions",
+    "account_id": "8799963",
+    "app_name": "Ascend GTM API v2",
+    "app_id": "32141064"
+  },
+
+  "slack": {
+    "app_name": "n8n - Ascend GTM",
+    "app_id": "A0AGM2FFJRG",
+    "workspace": "Ascendgtm",
+    "alert_channel": "#n8n.cloud"
+  },
+
+  "gong": {
+    "base_url": "https://us-58396.api.gong.io"
+  },
+
+  "wordpress": {
+    "site_url": "https://kahunaworkforce.com",
+    "rest_api_base": "https://kahunaworkforce.com/wp-json/wp/v2/",
+    "admin_url": "https://kahunaworkforce.com/wp-admin",
+    "hosting": "WP Engine",
+    "php_version_prod": "7.4",
+    "php_version_staging": "8.2",
+    "wp_version": "6.9.1"
+  },
+
+  "seo_pipeline": {
+    "target_domain": "kahunaworkforce.com",
+    "ga4_property_id": "273714189",
+    "gsc_site_url": "sc-domain:kahunaworkforce.com",
+    "database": "us",
+    "monitoring_schedule": "daily_7am",
+    "site_audit_schedule": "weekly_monday",
+    "rollout_pace": "2_pages_per_week",
+    "alert_email": "mishaal12000@gmail.com"
+  },
+
+  "external_apis": {
+    "_comment": "API keys for these are in .env — these are just references for discoverability.",
+    "fred": { "name": "FRED (St. Louis Fed)", "env_var": "FRED_API_KEY" },
+    "census": { "name": "US Census Bureau", "env_var": "CENSUS_API_KEY" },
+    "financial_modeling_prep": { "name": "Financial Modeling Prep", "env_var": "FMP_API_KEY" },
+    "newsapi_ai": { "name": "NewsAPI.ai", "env_var": "NEWSAPI_AI_KEY" },
+    "semrush": { "name": "SEMrush", "env_var": "SEMRUSH_API_KEY" },
+    "apollo": { "name": "Apollo.io", "env_var": "APOLLO_API_KEY" },
+    "gong": { "name": "Gong", "env_var": "GONG_ACCESS_KEY" },
+    "microsoft_clarity": { "name": "Microsoft Clarity", "env_var": "CLARITY_API_TOKEN" },
+    "quickbooks": { "name": "QuickBooks/Intuit", "env_var": "QUICKBOOKS_CLIENT_ID" },
+    "sec_edgar": { "name": "SEC EDGAR", "note": "Free — uses User-Agent header with email", "env_var": null },
+    "crossref": { "name": "Crossref", "note": "Free — open API", "env_var": null },
+    "world_bank": { "name": "World Bank API", "note": "Free — fully open", "env_var": null }
+  },
+
+  "pending_apis": {
+    "_comment": "APIs where signup was initiated but verification/approval is pending.",
+    "bls": "Registration submitted — CAPTCHA completion needed",
+    "semantic_scholar": "API key request submitted — reCAPTCHA needed",
+    "reddit": "API access request submitted — pending approval",
+    "visualping": "Account created — pending email verification",
+    "growjo": "Contact form submitted — awaiting response"
+  }
+}

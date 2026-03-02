@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 # n8n Enterprise Deployment Script
-# Deploys all workflow JSON files to your n8n instance via the REST API
+# Deploys workflows + syncs n8n variables from .env — ONE command, zero manual steps.
 #
 # Usage:
-#   ./deploy-to-n8n.sh <N8N_URL> <N8N_API_KEY>
-#   or set N8N_URL and N8N_API_KEY environment variables
+#   ./deploy-to-n8n.sh                          # Auto-loads .env from project root
+#   ./deploy-to-n8n.sh <N8N_URL> <N8N_API_KEY>  # Or pass explicitly
 #
 # Requirements: curl, bash, jq (optional, for prettier output)
 #
 # What this script does:
-#   1. Validates connectivity to the n8n instance
-#   2. Creates organizational tags (Infrastructure, Gateway, Monitoring, Testing)
-#   3. Discovers all workflow JSON files in n8n/workflows/**/*.json
-#   4. For each workflow: checks if it already exists (by name), creates or skips
-#   5. Activates workflows that should be always-on (health checks, monitors, gateways)
-#   6. Assigns appropriate tags to each workflow based on its directory
-#   7. Prints a deployment summary with IDs and webhook URLs
+#   1. Auto-loads .env from the project root (if no args provided)
+#   2. Validates connectivity to the n8n instance
+#   3. Syncs n8n project variables (SEMRUSH_API_KEY, GA4_PROPERTY_ID, etc.)
+#   4. Creates organizational tags (Infrastructure, Gateway, Monitoring, Testing, SEO-Pipeline)
+#   5. Discovers all workflow JSON files in n8n/workflows/**/*.json
+#   6. For each workflow: checks if it already exists (by name), creates or skips
+#   7. Activates workflows that should be always-on (health checks, monitors, gateways, SEO)
+#   8. Assigns appropriate tags to each workflow based on its directory
+#   9. Prints a deployment summary with IDs and webhook URLs
 #
 # Idempotency: Safe to run multiple times. Existing workflows (matched by name) are skipped.
 
@@ -45,7 +47,7 @@ else
 fi
 
 # Tags to create for organizing workflows
-TAGS=("Infrastructure" "Gateway" "Monitoring" "Testing")
+TAGS=("Infrastructure" "Gateway" "Monitoring" "Testing" "SEO-Pipeline")
 
 # Workflows that should be activated after deployment
 # Patterns matched against workflow file paths
@@ -62,6 +64,10 @@ ACTIVATE_PATTERNS=(
     "monitoring/alert-manager"
     "monitoring/daily-summary"
     "testing/smoke-tests"
+    "seo-pipeline/seo-monitoring"
+    "seo-pipeline/seo-pipeline-master"
+    "seo-pipeline/seo-data-collection"
+    "seo-pipeline/seo-content-optimizer"
 )
 
 # Map directory names to tag names (bash 3.2 compatible — no associative arrays)
@@ -71,6 +77,7 @@ dir_to_tag() {
         infrastructure) echo "Infrastructure" ;;
         monitoring)     echo "Monitoring" ;;
         testing)        echo "Testing" ;;
+        seo-pipeline)   echo "SEO-Pipeline" ;;
         *)              echo "" ;;
     esac
 }
@@ -226,7 +233,20 @@ n8n_api() {
 # ==============================================================================
 
 parse_args() {
-    # Accept positional args or environment variables
+    # Auto-load .env from project root if it exists
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local env_file="${script_dir}/../.env"
+
+    if [ -f "$env_file" ]; then
+        log_info "Auto-loading .env from $(cd "$(dirname "$env_file")" && pwd)/.env"
+        set -a
+        # shellcheck disable=SC1090
+        source "$env_file"
+        set +a
+    fi
+
+    # Accept positional args or environment variables (args override .env)
     if [ $# -ge 2 ]; then
         N8N_URL="${1%/}"  # Remove trailing slash if present
         N8N_API_KEY="$2"
@@ -234,24 +254,24 @@ parse_args() {
         N8N_URL="${1%/}"
         N8N_API_KEY="${N8N_API_KEY:-}"
     else
-        N8N_URL="${N8N_URL:-}"
+        N8N_URL="${N8N_INSTANCE_URL:-${N8N_URL:-}}"
         N8N_API_KEY="${N8N_API_KEY:-}"
     fi
 
     # Validate required values
     if [ -z "$N8N_URL" ]; then
-        log_error "N8N_URL is required. Pass as first argument or set as environment variable."
+        log_error "N8N_URL is required. Pass as first argument, set N8N_INSTANCE_URL in .env, or set as environment variable."
         echo ""
         echo "Usage: $0 <N8N_URL> <N8N_API_KEY>"
-        echo "   or: N8N_URL=https://your-instance.app.n8n.cloud N8N_API_KEY=xxx $0"
+        echo "   or: just run $0 (auto-loads from .env)"
         exit 1
     fi
 
     if [ -z "$N8N_API_KEY" ]; then
-        log_error "N8N_API_KEY is required. Pass as second argument or set as environment variable."
+        log_error "N8N_API_KEY is required. Pass as second argument, set in .env, or set as environment variable."
         echo ""
         echo "Usage: $0 <N8N_URL> <N8N_API_KEY>"
-        echo "   or: N8N_URL=https://your-instance.app.n8n.cloud N8N_API_KEY=xxx $0"
+        echo "   or: just run $0 (auto-loads from .env)"
         exit 1
     fi
 }
@@ -259,6 +279,101 @@ parse_args() {
 # ==============================================================================
 # Core Deployment Functions
 # ==============================================================================
+
+# Step 0.5: Sync n8n project variables from .env
+# This eliminates the need to manually set variables in the n8n UI
+sync_n8n_variables() {
+    log_header "Syncing n8n Project Variables"
+
+    # Variables to sync: env_var_name -> n8n_variable_key
+    # These are the variables that workflows reference via $vars.*
+    local VAR_KEYS=()
+    local VAR_VALS=()
+
+    # Add each variable we want synced to n8n
+    add_var() {
+        local key="$1"
+        local val="$2"
+        if [ -n "$val" ]; then
+            VAR_KEYS+=("$key")
+            VAR_VALS+=("$val")
+        fi
+    }
+
+    add_var "SEMRUSH_API_KEY" "${SEMRUSH_API_KEY:-}"
+    add_var "GA4_PROPERTY_ID" "${GA4_PROPERTY_ID:-}"
+    add_var "GSC_SITE_URL" "${GSC_SITE_URL:-}"
+    add_var "GOOGLE_ADS_CUSTOMER_ID" "${GOOGLE_ADS_CUSTOMER_ID:-}"
+    add_var "GOOGLE_ADS_LOGIN_CUSTOMER_ID" "${GOOGLE_ADS_LOGIN_CUSTOMER_ID:-}"
+    add_var "GOOGLE_ADS_DEVELOPER_TOKEN" "${GOOGLE_ADS_DEVELOPER_TOKEN:-}"
+    add_var "ALERT_EMAIL" "${ALERT_EMAIL:-}"
+    add_var "APOLLO_API_KEY" "${APOLLO_API_KEY:-}"
+    add_var "FRED_API_KEY" "${FRED_API_KEY:-}"
+    add_var "CENSUS_API_KEY" "${CENSUS_API_KEY:-}"
+    add_var "FMP_API_KEY" "${FMP_API_KEY:-}"
+    add_var "NEWSAPI_AI_KEY" "${NEWSAPI_AI_KEY:-}"
+    add_var "GONG_ACCESS_KEY" "${GONG_ACCESS_KEY:-}"
+    add_var "GONG_BASE_URL" "${GONG_BASE_URL:-}"
+    add_var "CLARITY_API_TOKEN" "${CLARITY_API_TOKEN:-}"
+    # N8N_GATEWAY_API_KEY is the API key for webhook auth — same as N8N_API_KEY
+    add_var "N8N_GATEWAY_API_KEY" "${N8N_API_KEY:-}"
+    add_var "N8N_HOST" "${N8N_URL:-}"
+
+    if [ ${#VAR_KEYS[@]} -eq 0 ]; then
+        log_warn "No variables to sync (no values found in .env)."
+        return
+    fi
+
+    log_info "Found ${#VAR_KEYS[@]} variable(s) to sync."
+
+    # Get existing variables
+    local existing_vars_response
+    existing_vars_response=$(n8n_api GET /variables 2>/dev/null) || {
+        log_warn "Could not fetch existing variables (API may not support it). Skipping variable sync."
+        return
+    }
+
+    local synced=0
+    local skipped=0
+    local failed=0
+
+    local i=0
+    for key in "${VAR_KEYS[@]}"; do
+        local val="${VAR_VALS[$i]}"
+        i=$((i + 1))
+
+        # Check if variable already exists
+        local existing_id=""
+        if $HAS_JQ; then
+            existing_id=$(echo "$existing_vars_response" | jq -r ".data[]? | select(.key == \"$key\") | .id // empty" 2>/dev/null)
+        else
+            # Best-effort extraction
+            existing_id=$(echo "$existing_vars_response" | sed 's/},{/}\n{/g' | grep "\"key\"[[:space:]]*:[[:space:]]*\"${key}\"" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\{0,1\}\([^,"}\]*\)\"\{0,1\}.*/\1/p' | head -1)
+        fi
+
+        if [ -n "$existing_id" ]; then
+            # Update existing variable
+            if n8n_api PATCH "/variables/${existing_id}" -d "{\"value\": \"${val}\"}" > /dev/null 2>&1; then
+                log_info "  Updated: ${key}"
+                synced=$((synced + 1))
+            else
+                log_warn "  Failed to update: ${key}"
+                failed=$((failed + 1))
+            fi
+        else
+            # Create new variable
+            if n8n_api POST /variables -d "{\"key\": \"${key}\", \"value\": \"${val}\"}" > /dev/null 2>&1; then
+                log_success "  Created: ${key}"
+                synced=$((synced + 1))
+            else
+                log_warn "  Failed to create: ${key} (may require n8n Enterprise)"
+                failed=$((failed + 1))
+            fi
+        fi
+    done
+
+    log_info "Variables synced: ${synced}, failed: ${failed}"
+}
 
 # Step 0: Validate connectivity to n8n
 validate_connection() {
@@ -603,6 +718,7 @@ main() {
 
     # Run deployment steps
     validate_connection
+    sync_n8n_variables
     create_tags
     deploy_workflows
     print_summary
