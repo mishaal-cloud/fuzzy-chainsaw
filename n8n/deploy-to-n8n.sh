@@ -164,24 +164,15 @@ sync_variables() {
     existing_id=$(echo "$existing_vars" | jq -r --arg k "$key" '.[] | select(.key == $k) | .id')
 
     if [[ -n "$existing_id" ]]; then
-      # FIX: Use PATCH with the variable ID to update existing variables
-      local patch_result
-      patch_result=$(api_patch "/variables/$existing_id" "$(jq -n --arg v "$value" '{value: $v}')" 2>&1) && {
+      # Delete and recreate (n8n Cloud doesn't support PATCH on variables)
+      curl -sf -X DELETE -H "$AUTH_HEADER" "$API_URL/variables/$existing_id" &>/dev/null
+      if api_post "/variables" "$(jq -n --arg k "$key" --arg v "$value" '{key: $k, value: $v}')" >/dev/null 2>&1; then
         echo "[OK]   Updated: $key"
         ((VARS_SYNCED++))
-      } || {
-        # Some n8n versions use DELETE + POST instead of PATCH
-        # Try delete and recreate
-        curl -sf -X DELETE -H "$AUTH_HEADER" "$API_URL/variables/$existing_id" &>/dev/null
-        local recreate_result
-        recreate_result=$(api_post "/variables" "$(jq -n --arg k "$key" --arg v "$value" '{key: $k, value: $v}')" 2>&1) && {
-          echo "[OK]   Recreated: $key"
-          ((VARS_SYNCED++))
-        } || {
-          echo "[WARN]   Failed to update: $key"
-          ((VARS_FAILED++))
-        }
-      }
+      else
+        echo "[WARN]   Failed to update: $key"
+        ((VARS_FAILED++))
+      fi
     else
       # Create new variable
       local create_result

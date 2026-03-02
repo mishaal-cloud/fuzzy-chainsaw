@@ -174,17 +174,21 @@ echo "════════════════════════�
 echo ""
 
 # Tag-to-directory mapping
-declare -A TAG_DIR_MAP=(
-  ["Infrastructure"]="infrastructure"
-  ["Gateway"]="gateways"
-  ["Monitoring"]="monitoring"
-  ["Testing"]="testing"
-  ["SEO-Pipeline"]="seo-pipeline"
-)
+tag_to_dir() {
+  case "$1" in
+    Infrastructure) echo "infrastructure" ;;
+    Gateway)        echo "gateways" ;;
+    Monitoring)     echo "monitoring" ;;
+    Testing)        echo "testing" ;;
+    SEO-Pipeline)   echo "seo-pipeline" ;;
+    *)              echo "uncategorized" ;;
+  esac
+}
 
 exported=0
 
-echo "$workflows" | jq -c '.data[]' | while read -r wf; do
+# Use process substitution instead of pipe to preserve counter
+while read -r wf; do
   local_id=$(echo "$wf" | jq -r '.id')
   local_name=$(echo "$wf" | jq -r '.name')
 
@@ -196,7 +200,7 @@ echo "$workflows" | jq -c '.data[]' | while read -r wf; do
 
   # Determine directory from first tag
   first_tag=$(echo "$wf" | jq -r '(.tags // [])[0].name // empty')
-  dir_name="${TAG_DIR_MAP[$first_tag]:-uncategorized}"
+  dir_name=$(tag_to_dir "$first_tag")
 
   # Create safe filename from workflow name
   safe_name=$(echo "$local_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
@@ -208,7 +212,7 @@ echo "$workflows" | jq -c '.data[]' | while read -r wf; do
   echo "$full_wf" | jq 'del(.id, .createdAt, .updatedAt, .versionId)' > "$WORKFLOWS_DIR/$dir_name/$safe_name.json"
   echo "[OK] Exported: $dir_name/$safe_name.json"
   ((exported++)) || true
-done
+done < <(echo "$workflows" | jq -c '.data[]')
 
 echo ""
 echo "[INFO] Exported $exported workflow(s) to $WORKFLOWS_DIR/"
