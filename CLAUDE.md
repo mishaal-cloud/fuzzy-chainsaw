@@ -43,8 +43,9 @@ You can call any webhook endpoint to execute API calls through n8n on behalf of 
 - **n8n Management API:** Uses header `X-N8N-API-KEY` with the value from environment variable `N8N_API_KEY`
 - **API Gateway Webhooks:** Uses header `X-API-KEY` with the gateway API key
 
-The user sets `N8N_API_KEY` as an environment variable before starting the session.
-Always use this for n8n management API calls.
+The API key is stored in the project root `.env` file (gitignored, never committed).
+At the start of each session, load it with: `source .env` or `export $(cat .env | grep -v '^#' | xargs)`
+Always use `$N8N_API_KEY` for n8n management API calls.
 
 ---
 
