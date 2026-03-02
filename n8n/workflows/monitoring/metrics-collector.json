@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare n8n API request to fetch recent executions\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\nconst now = new Date();\nconst fiveMinAgo = new Date(now - 5 * 60 * 1000);\n\nreturn [{\n  json: {\n    url: `${baseUrl}/api/v1/executions`,\n    params: {\n      status: 'all',\n      limit: 250,\n      startedAfter: fiveMinAgo.toISOString(),\n      startedBefore: now.toISOString()\n    },\n    timestamp: now.toISOString()\n  }\n}];"
+        "jsCode": "// Prepare n8n API request to fetch recent executions\nconst baseUrl = $vars.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\nconst now = new Date();\nconst fiveMinAgo = new Date(now - 5 * 60 * 1000);\n\nreturn [{\n  json: {\n    url: `${baseUrl}/api/v1/executions`,\n    params: {\n      status: 'all',\n      limit: 250,\n      startedAfter: fiveMinAgo.toISOString(),\n      startedBefore: now.toISOString()\n    },\n    timestamp: now.toISOString()\n  }\n}];"
       },
       "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
       "name": "Prepare API Request",
@@ -112,7 +112,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"\\u26a0\\ufe0f High Error Rate Alert\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Error Rate:*\\n{{ $json.error_rate }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total Executions:*\\n{{ $json.total_executions }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Failed:*\\n{{ $json.failed }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Period:*\\n{{ $json.period_start }} - {{ $json.period_end }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Source: Monitor: Metrics Collector | Threshold: >5%\"\n        }\n      ]\n    }\n  ]\n}",

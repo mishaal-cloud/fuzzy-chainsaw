@@ -79,7 +79,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"\\ud83d\\udea8 Smoke Test Failed\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Endpoint:*\\n{{ $json.endpoint }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*URL:*\\n{{ $json.url }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Status Code:*\\n{{ $json.status_code || 'N/A' }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Error:*\\n{{ $json.error_message }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Checked at: {{ $json.checked_at }} | Source: Smoke Tests\"\n        }\n      ]\n    }\n  ]\n}",

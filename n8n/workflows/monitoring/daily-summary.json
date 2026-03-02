@@ -21,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build the n8n API request to fetch the last 24 hours of executions\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\n\nreturn [{\n  json: {\n    api_url: `${baseUrl}/api/v1/executions`,\n    period: {\n      start: yesterday.toISOString(),\n      end: now.toISOString()\n    },\n    report_date: now.toISOString().split('T')[0],\n    params: {\n      limit: 1000,\n      startedAfter: yesterday.toISOString(),\n      startedBefore: now.toISOString()\n    }\n  }\n}];"
+        "jsCode": "// Build the n8n API request to fetch the last 24 hours of executions\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\nconst baseUrl = $vars.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\n\nreturn [{\n  json: {\n    api_url: `${baseUrl}/api/v1/executions`,\n    period: {\n      start: yesterday.toISOString(),\n      end: now.toISOString()\n    },\n    report_date: now.toISOString().split('T')[0],\n    params: {\n      limit: 1000,\n      startedAfter: yesterday.toISOString(),\n      startedBefore: now.toISOString()\n    }\n  }\n}];"
       },
       "id": "6f7a8b9c-0d1e-4f2a-3b4c-d5e6f7a8b9c0",
       "name": "Prepare Request",
@@ -86,7 +86,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",

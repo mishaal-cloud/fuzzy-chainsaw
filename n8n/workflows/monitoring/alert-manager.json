@@ -28,7 +28,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ blocks: [ { type: 'header', text: { type: 'plain_text', text: ($json.severity === 'critical' ? 'CRITICAL: ' : $json.severity === 'warning' ? 'WARNING: ' : 'INFO: ') + $json.title } }, { type: 'section', text: { type: 'mrkdwn', text: $json.message } }, { type: 'section', fields: [ { type: 'mrkdwn', text: '*Severity:*\\n' + $json.severity }, { type: 'mrkdwn', text: '*Source:*\\n' + $json.source }, { type: 'mrkdwn', text: '*Alert ID:*\\n' + $json.id }, { type: 'mrkdwn', text: '*Time:*\\n' + $json.timestamp } ] }, { type: 'context', elements: [{ type: 'mrkdwn', text: 'Channels: ' + $json.channels.join(', ') + ' | Routed by: Alert Manager' }] } ] }) }}",

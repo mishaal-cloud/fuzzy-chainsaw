@@ -356,13 +356,23 @@ The **Universal API Gateway** (ID: `WQCwEDVb2L6Xkuwd`) is the primary gateway.
 It supports 30+ APIs and handles auth, rate limiting, and error handling.
 Do NOT deploy a separate main-api-gateway — it conflicts with this one.
 
+### n8n Cloud Variables
+
+All workflows use `$vars.*` (n8n project variables) — NOT `$env.*` (server environment
+variables), because n8n Cloud does not support `$env` through the UI.
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `SLACK_WEBHOOK_URL` | n8n Variables | Slack incoming webhook for alerts (posts to #n8n.cloud) |
+| `N8N_GATEWAY_API_KEY` | n8n Variables | Gateway API key for health check credential tests |
+| `N8N_HOST` | n8n Variables | n8n instance URL (default: `https://mmurawala.app.n8n.cloud`) |
+
+Set these in: n8n UI → Project Settings → Variables tab.
+
 ### Slack Notifications
 
-All monitoring workflows send alerts to the Slack webhook URL configured in the
-n8n environment variable `SLACK_WEBHOOK_URL`. If alerts are not being received,
-the user needs to:
-1. Create a Slack incoming webhook at https://api.slack.com/messaging/webhooks
-2. Set the `SLACK_WEBHOOK_URL` environment variable in n8n settings
+All monitoring workflows send alerts to Slack via `$vars.SLACK_WEBHOOK_URL`.
+Currently configured to post to the **#n8n.cloud** channel in the **Ascendgtm** workspace.
 
 ---
 
