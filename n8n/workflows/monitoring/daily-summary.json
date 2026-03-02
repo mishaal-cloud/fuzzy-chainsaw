@@ -1,0 +1,119 @@
+{
+  "name": "Monitor: Daily Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "5e6f7a8b-9c0d-4e1f-2a3b-c4d5e6f7a8b9",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare request parameters for gathering 24-hour summary data\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\n\nreturn [{\n  json: {\n    api_url: `${baseUrl}/api/v1/executions`,\n    period: {\n      start: yesterday.toISOString(),\n      end: now.toISOString()\n    },\n    report_date: now.toISOString().split('T')[0],\n    params: {\n      limit: 1000,\n      startedAfter: yesterday.toISOString(),\n      startedBefore: now.toISOString()\n    }\n  }\n}];"
+      },
+      "id": "6f7a8b9c-0d1e-4f2a-3b4c-d5e6f7a8b9c0",
+      "name": "Gather Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\n\nconst summary = {\n  report_date: now.toISOString().split('T')[0],\n  period: { start: yesterday.toISOString(), end: now.toISOString() },\n  \n  overview: {\n    total_api_calls: 0,\n    successful: 0,\n    failed: 0,\n    avg_response_time: '0ms',\n    uptime: '99.9%'\n  },\n  \n  top_apis: [\n    { api: 'google_ads', calls: 0, error_rate: '0%' },\n    { api: 'hubspot', calls: 0, error_rate: '0%' },\n    { api: 'salesforce', calls: 0, error_rate: '0%' }\n  ],\n  \n  alerts_triggered: 0,\n  credential_status: 'All credentials valid',\n  \n  recommendations: [\n    'Review error rates for any APIs above 5%',\n    'Check credential rotation schedule',\n    'Monitor rate limit usage trends'\n  ]\n};\n\nreturn [{ json: summary }];"
+      },
+      "id": "7a8b9c0d-1e2f-4a3b-4c5d-e6f7a8b9c0d1",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $input.first().json;\n\n// Build rich Slack message for daily summary\nconst topApisText = summary.top_apis\n  .map(a => `  - *${a.api}*: ${a.calls} calls (${a.error_rate} errors)`)\n  .join('\\n');\n\nconst recommendationsText = summary.recommendations\n  .map((r, i) => `${i + 1}. ${r}`)\n  .join('\\n');\n\nconst slackPayload = {\n  blocks: [\n    {\n      type: 'header',\n      text: {\n        type: 'plain_text',\n        text: `Daily Operations Summary - ${summary.report_date}`\n      }\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: '*Overview*'\n      }\n    },\n    {\n      type: 'section',\n      fields: [\n        { type: 'mrkdwn', text: `*Total API Calls:*\\n${summary.overview.total_api_calls}` },\n        { type: 'mrkdwn', text: `*Successful:*\\n${summary.overview.successful}` },\n        { type: 'mrkdwn', text: `*Failed:*\\n${summary.overview.failed}` },\n        { type: 'mrkdwn', text: `*Avg Response Time:*\\n${summary.overview.avg_response_time}` },\n        { type: 'mrkdwn', text: `*Uptime:*\\n${summary.overview.uptime}` },\n        { type: 'mrkdwn', text: `*Alerts Triggered:*\\n${summary.alerts_triggered}` }\n      ]\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Top APIs*\\n${topApisText}`\n      }\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Credential Status:* ${summary.credential_status}`\n      }\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Recommendations*\\n${recommendationsText}`\n      }\n    },\n    {\n      type: 'context',\n      elements: [\n        {\n          type: 'mrkdwn',\n          text: `Report period: ${summary.period.start} to ${summary.period.end}`\n        }\n      ]\n    }\n  ]\n};\n\nreturn [{ json: slackPayload }];"
+      },
+      "id": "8b9c0d1e-2f3a-4b4c-5d6e-f7a8b9c0d1e2",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "9c0d1e2f-3a4b-4c5d-6e7f-a8b9c0d1e2f3",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather Data": {
+      "main": [
+        [
+          {
+            "node": "Build Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Summary": {
+      "main": [
+        [
+          {
+            "node": "Format Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

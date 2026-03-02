@@ -1,0 +1,81 @@
+{
+  "name": "Infrastructure: Request Logger",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-2001-4b01-b002-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst logEntry = {\n  request_id: input.request_id || $execution.id,\n  timestamp: new Date().toISOString(),\n  client: input.client || 'unknown',\n  api: input.api || 'unknown',\n  action: input.action || 'unknown',\n  status: input.status || 'unknown',\n  duration_ms: input.duration_ms || 0,\n  error: input.error || null,\n  metadata: {\n    workflow_id: $workflow.id,\n    execution_id: $execution.id\n  }\n};\n\nreturn [{ json: logEntry }];"
+      },
+      "id": "b2c3d4e5-2001-4b01-b002-000000000002",
+      "name": "Format Log Entry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const logEntry = $input.first().json;\n\n// In production, this would write to an n8n data table, database, or external logging service\n// such as Elasticsearch, Datadog, or a similar observability platform.\n// For MVP, we log to console and pass through the structured entry.\n\nconst storedLog = {\n  ...logEntry,\n  stored: true,\n  storage_backend: 'console',\n  stored_at: new Date().toISOString()\n};\n\nconsole.log(`[REQUEST_LOG] ${JSON.stringify(storedLog)}`);\n\nreturn [{ json: storedLog }];"
+      },
+      "id": "b2c3d4e5-2001-4b01-b002-000000000003",
+      "name": "Store Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [710, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const storedLog = $input.first().json;\n\nreturn [{\n  json: {\n    success: true,\n    request_id: storedLog.request_id,\n    logged_at: storedLog.stored_at,\n    message: 'Request logged successfully'\n  }\n}];"
+      },
+      "id": "b2c3d4e5-2001-4b01-b002-000000000004",
+      "name": "Return Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Log Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Log Entry": {
+      "main": [
+        [
+          {
+            "node": "Store Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Log": {
+      "main": [
+        [
+          {
+            "node": "Return Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "name": "Testing: Test Runner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "run-tests",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const testCases = [\n  {\n    name: 'API Discovery - Returns Catalog',\n    method: 'GET',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/api-discovery',\n    expected: { has_field: 'apis' }\n  },\n  {\n    name: 'Gateway - Valid Request Structure',\n    method: 'POST',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/api-gateway',\n    headers: { 'X-API-KEY': 'test-key' },\n    body: { client: 'test-runner', api: 'google_ads', action: 'campaigns', params: {} },\n    expected: { has_field: 'request_id' }\n  },\n  {\n    name: 'Gateway - Missing Required Fields',\n    method: 'POST',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/api-gateway',\n    headers: { 'X-API-KEY': 'test-key' },\n    body: { client: 'test-runner' },\n    expected: { has_field: 'validation_errors' }\n  },\n  {\n    name: 'Gateway - Unknown API',\n    method: 'POST',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/api-gateway',\n    headers: { 'X-API-KEY': 'test-key' },\n    body: { client: 'test-runner', api: 'nonexistent_api', action: 'test', params: {} },\n    expected: { has_field: 'available_apis' }\n  },\n  {\n    name: 'Health Check - Returns Report',\n    method: 'GET',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/health-check',\n    expected: { has_field: 'health_report' }\n  }\n];\n\nreturn testCases.map(tc => ({ json: tc }));"
+      },
+      "id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+      "name": "Define Test Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "={{ $json.headers ? $json.headers['X-API-KEY'] || '' : '' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body ? JSON.stringify($json.body) : '{}' }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a",
+      "name": "Execute Test",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const testCase = $('Define Test Cases').first().json;\nconst result = $input.first().json;\n\nconst passed = testCase.expected.has_field ? \n  result[testCase.expected.has_field] !== undefined : true;\n\nreturn [{\n  json: {\n    test_name: testCase.name,\n    passed: passed,\n    expected: testCase.expected,\n    actual_keys: Object.keys(result),\n    response_snippet: JSON.stringify(result).substring(0, 200)\n  }\n}];"
+      },
+      "id": "e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b",
+      "name": "Validate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all test results into a final report\nconst allResults = $input.all();\n\nconst report = {\n  test_run_id: $execution.id,\n  executed_at: new Date().toISOString(),\n  total_tests: allResults.length,\n  passed: 0,\n  failed: 0,\n  results: []\n};\n\nfor (const item of allResults) {\n  const r = item.json;\n  report.results.push(r);\n  if (r.passed) {\n    report.passed++;\n  } else {\n    report.failed++;\n  }\n}\n\nreport.success_rate = report.total_tests > 0\n  ? ((report.passed / report.total_tests) * 100).toFixed(1) + '%'\n  : '0%';\nreport.overall_status = report.failed === 0 ? 'PASS' : 'FAIL';\n\nreturn [{ json: report }];"
+      },
+      "id": "f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0d",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Define Test Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Define Test Cases": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Execute Test",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Test": {
+      "main": [
+        [
+          {
+            "node": "Validate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Result": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

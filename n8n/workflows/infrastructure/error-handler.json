@@ -1,0 +1,164 @@
+{
+  "name": "Infrastructure: Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-1001-4a01-b001-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst errorMessage = (input.error_message || input.message || '').toLowerCase();\nconst statusCode = input.status_code || input.statusCode || 0;\nconst errorType = input.error_type || '';\n\nlet category = 'unknown';\nlet severity = 'warning';\nlet suggested_action = 'escalate';\n\n// Classify by error type or message content\nif (errorType === 'auth_error' || statusCode === 401 || statusCode === 403 || errorMessage.includes('unauthorized') || errorMessage.includes('forbidden') || errorMessage.includes('authentication')) {\n  category = 'auth_error';\n  severity = 'critical';\n  suggested_action = 'escalate';\n} else if (errorType === 'rate_limit' || statusCode === 429 || errorMessage.includes('rate limit') || errorMessage.includes('too many requests') || errorMessage.includes('quota')) {\n  category = 'rate_limit';\n  severity = 'warning';\n  suggested_action = 'retry';\n} else if (errorType === 'timeout' || errorMessage.includes('timeout') || errorMessage.includes('timed out') || errorMessage.includes('econnaborted')) {\n  category = 'timeout';\n  severity = 'warning';\n  suggested_action = 'retry';\n} else if (statusCode >= 400 && statusCode < 500) {\n  if (statusCode === 400 || statusCode === 422 || errorMessage.includes('validation') || errorMessage.includes('invalid')) {\n    category = 'validation_error';\n    severity = 'info';\n    suggested_action = 'ignore';\n  } else {\n    category = 'api_error';\n    severity = 'warning';\n    suggested_action = 'escalate';\n  }\n} else if (statusCode >= 500) {\n  category = 'api_error';\n  severity = 'critical';\n  suggested_action = 'retry';\n} else if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {\n  category = 'validation_error';\n  severity = 'info';\n  suggested_action = 'ignore';\n} else if (errorMessage) {\n  category = 'api_error';\n  severity = 'warning';\n  suggested_action = 'escalate';\n}\n\nreturn [{\n  json: {\n    error_id: input.error_id || $execution.id,\n    category: category,\n    severity: severity,\n    suggested_action: suggested_action,\n    original_error: {\n      message: input.error_message || input.message || 'No error message provided',\n      status_code: statusCode,\n      error_type: errorType,\n      source_workflow: input.source_workflow || 'unknown',\n      source_node: input.source_node || 'unknown',\n      api: input.api || 'unknown',\n      client: input.client || 'unknown'\n    },\n    classified_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "a1b2c3d4-1001-4a01-b001-000000000002",
+      "name": "Classify Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const error = $input.first().json;\n\nconst logEntry = {\n  log_type: 'error',\n  error_id: error.error_id,\n  category: error.category,\n  severity: error.severity,\n  suggested_action: error.suggested_action,\n  source_workflow: error.original_error.source_workflow,\n  source_node: error.original_error.source_node,\n  api: error.original_error.api,\n  client: error.original_error.client,\n  error_message: error.original_error.message,\n  status_code: error.original_error.status_code,\n  classified_at: error.classified_at,\n  logged_at: new Date().toISOString(),\n  metadata: {\n    workflow_id: $workflow.id,\n    execution_id: $execution.id\n  }\n};\n\n// In production, this would write to a data table or external logging service\n// For now, we format and pass through the structured log entry\nconsole.log(JSON.stringify(logEntry));\n\nreturn [{ json: { ...error, log_entry: logEntry, logged: true } }];"
+      },
+      "id": "a1b2c3d4-1001-4a01-b001-000000000003",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [710, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-critical",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "critical",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a1b2c3d4-1001-4a01-b001-000000000004",
+      "name": "Is Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"CRITICAL Error Alert\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Category:*\\n{{ $json.category }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Severity:*\\n{{ $json.severity }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*API:*\\n{{ $json.original_error.api }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Client:*\\n{{ $json.original_error.client }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Error Message:*\\n```{{ $json.original_error.message }}```\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Source Workflow:*\\n{{ $json.original_error.source_workflow }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Source Node:*\\n{{ $json.original_error.source_node }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Suggested Action:* {{ $json.suggested_action }}\\n*Error ID:* {{ $json.error_id }}\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Classified at: {{ $json.classified_at }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-1001-4a01-b001-000000000005",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1170, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const error = $input.first().json;\n\nreturn [{\n  json: {\n    error_id: error.error_id,\n    category: error.category,\n    severity: error.severity,\n    suggested_action: error.suggested_action,\n    alerted: error.severity === 'critical',\n    logged: true,\n    processed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "a1b2c3d4-1001-4a01-b001-000000000006",
+      "name": "Return Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Is Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Critical?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Alert": {
+      "main": [
+        [
+          {
+            "node": "Return Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

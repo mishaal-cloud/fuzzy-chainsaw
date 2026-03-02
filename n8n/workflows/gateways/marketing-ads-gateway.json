@@ -1,0 +1,94 @@
+{
+  "name": "Gateway: Marketing Ads",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f4a1b2c3-1001-4e5f-9a0b-1c2d3e4f5a6b",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { api, action, params } = $input.first().json;\n\nconst apiConfigs = {\n  google_ads: {\n    base_url: 'https://googleads.googleapis.com/v17',\n    endpoints: {\n      campaigns: { method: 'GET', path: '/customers/{customer_id}/googleAds:searchStream', body: { query: `SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING ${params.date_range || 'LAST_7_DAYS'}` } },\n      ad_groups: { method: 'GET', path: '/customers/{customer_id}/googleAds:searchStream', body: { query: 'SELECT ad_group.id, ad_group.name, ad_group.status FROM ad_group' } },\n      metrics: { method: 'GET', path: '/customers/{customer_id}/googleAds:searchStream', body: { query: 'SELECT metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM customer' } }\n    }\n  },\n  meta_ads: {\n    base_url: 'https://graph.facebook.com/v19.0',\n    endpoints: {\n      campaigns: { method: 'GET', path: '/act_{ad_account_id}/campaigns', query: { fields: 'id,name,status,objective,daily_budget' } },\n      ad_sets: { method: 'GET', path: '/act_{ad_account_id}/adsets', query: { fields: 'id,name,status,daily_budget,targeting' } },\n      insights: { method: 'GET', path: '/act_{ad_account_id}/insights', query: { fields: 'impressions,clicks,spend,actions', date_preset: params.date_range || 'last_7d' } }\n    }\n  },\n  linkedin_ads: {\n    base_url: 'https://api.linkedin.com/v2',\n    endpoints: {\n      campaigns: { method: 'GET', path: '/adCampaignsV2', query: { q: 'search' } },\n      analytics: { method: 'GET', path: '/adAnalyticsV2', query: { q: 'analytics', dateRange: params.date_range } }\n    }\n  },\n  tiktok_ads: {\n    base_url: 'https://business-api.tiktok.com/open_api/v1.3',\n    endpoints: {\n      campaigns: { method: 'GET', path: '/campaign/get/', query: { advertiser_id: params.advertiser_id } },\n      reports: { method: 'GET', path: '/report/integrated/get/', query: { advertiser_id: params.advertiser_id, report_type: 'BASIC' } }\n    }\n  }\n};\n\nconst config = apiConfigs[api];\nif (!config) {\n  return [{ json: { error: true, message: `Unknown marketing API: ${api}` } }];\n}\n\nconst endpoint = config.endpoints[action];\nif (!endpoint) {\n  return [{ json: { error: true, message: `Unknown action '${action}' for ${api}. Available: ${Object.keys(config.endpoints).join(', ')}` } }];\n}\n\nreturn [{\n  json: {\n    method: endpoint.method,\n    url: config.base_url + endpoint.path,\n    query: endpoint.query || {},\n    body: endpoint.body || {},\n    api: api,\n    action: action\n  }\n}];"
+      },
+      "id": "f4a1b2c3-1002-4e5f-9a0b-1c2d3e4f5a6b",
+      "name": "Build API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f4a1b2c3-1003-4e5f-9a0b-1c2d3e4f5a6b",
+      "name": "Make API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst request = $('Build API Request').first().json;\n\nif (input.error || input.statusCode >= 400) {\n  return [{\n    json: {\n      error: true,\n      api: request.api,\n      action: request.action,\n      status_code: input.statusCode || 500,\n      message: input.message || input.error || 'API call failed',\n      raw_error: input\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    api: request.api,\n    action: request.action,\n    data: input.data || input.body || input,\n    metadata: {\n      timestamp: new Date().toISOString(),\n      execution_id: $execution.id\n    }\n  }\n}];"
+      },
+      "id": "f4a1b2c3-1004-4e5f-9a0b-1c2d3e4f5a6b",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Request": {
+      "main": [
+        [
+          {
+            "node": "Make API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make API Call": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

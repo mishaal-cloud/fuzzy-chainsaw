@@ -1,0 +1,888 @@
+openapi: 3.0.3
+info:
+  title: n8n Enterprise API Gateway
+  description: |
+    AI-First API Gateway built on n8n. This gateway provides a unified interface
+    for AI agents (Claude, ChatGPT, Gemini, and others) to interact with 30+ business
+    APIs through a single webhook endpoint.
+
+    ## Architecture
+    Any AI agent sends a standardized JSON request to the gateway webhook. The gateway
+    handles authentication, rate limiting, routing, and error handling for all connected APIs.
+
+    ## Authentication
+    All requests must include a valid API key in the `X-API-KEY` header.
+
+    ## Rate Limiting
+    Each API has its own rate limits. The gateway tracks usage per client and will return
+    `429 Too Many Requests` when limits are exceeded. Check `X-RateLimit-Remaining` headers
+    in responses.
+
+    ## Instance
+    n8n Cloud instance: https://mmurawala.app.n8n.cloud
+  version: 2.0.0
+  contact:
+    name: Platform Team
+    email: platform@example.com
+  license:
+    name: Proprietary
+    url: https://example.com/license
+
+servers:
+  - url: https://mmurawala.app.n8n.cloud/webhook
+    description: Production n8n Cloud instance
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Gateway
+    description: Core API Gateway operations for routing requests to backend APIs
+  - name: Discovery
+    description: API catalog and capability discovery
+  - name: Operations
+    description: Health monitoring and testing endpoints
+
+paths:
+  /api-discovery:
+    get:
+      tags:
+        - Discovery
+      summary: Discover available APIs and their capabilities
+      description: |
+        Returns a catalog of all available APIs, their supported actions,
+        required parameters, and rate limits. AI agents should call this
+        endpoint first to understand what APIs and actions are available.
+      operationId: discoverApis
+      parameters:
+        - name: category
+          in: query
+          description: Filter by API category
+          required: false
+          schema:
+            type: string
+            enum:
+              - marketing_ads
+              - crm
+              - analytics
+              - google_suite
+              - communication
+              - project_management
+              - ecommerce
+              - ai_ml
+              - data_storage
+        - name: api
+          in: query
+          description: Get details for a specific API
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: API catalog returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryResponse'
+              examples:
+                full_catalog:
+                  summary: Full API catalog
+                  value:
+                    success: true
+                    data:
+                      total_apis: 30
+                      categories:
+                        marketing_ads:
+                          - name: google_ads
+                            actions:
+                              - campaigns
+                              - ad_groups
+                              - ads
+                              - keywords
+                              - metrics
+                              - create_campaign
+                            required_params:
+                              - customer_id
+                          - name: meta_ads
+                            actions:
+                              - campaigns
+                              - ad_sets
+                              - ads
+                              - insights
+                              - create_campaign
+                            required_params:
+                              - ad_account_id
+                        crm:
+                          - name: hubspot
+                            actions:
+                              - contacts
+                              - companies
+                              - deals
+                              - create_contact
+                              - create_deal
+                              - pipelines
+                            required_params: []
+                filtered_by_category:
+                  summary: Filtered by category
+                  value:
+                    success: true
+                    data:
+                      total_apis: 4
+                      categories:
+                        marketing_ads:
+                          - name: google_ads
+                            actions:
+                              - campaigns
+                              - ad_groups
+                              - ads
+                            required_params:
+                              - customer_id
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api-gateway:
+    post:
+      tags:
+        - Gateway
+      summary: Execute an API action through the gateway
+      description: |
+        The primary endpoint for all API interactions. Accepts a standardized
+        request format, validates it, applies rate limiting, routes to the
+        appropriate API, and returns a normalized response.
+
+        ### Supported APIs
+        Marketing: Google Ads, Meta Ads, LinkedIn Ads, TikTok Ads, Twitter Ads
+        CRM: HubSpot, Salesforce, Pipedrive
+        Analytics: GA4, Search Console, Mixpanel, Hotjar
+        Google Suite: Gmail, Calendar, Drive, Sheets
+        Communication: Slack, Microsoft Teams, SendGrid, Twilio
+        Project Management: Asana, Jira, Notion, Trello
+        E-commerce: Shopify, Stripe
+        AI/ML: OpenAI, Anthropic
+        Data Storage: Airtable, Supabase
+      operationId: executeApiAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GatewayRequest'
+            examples:
+              google_ads_campaigns:
+                summary: Get Google Ads campaigns
+                value:
+                  client: claude-desktop
+                  api: google_ads
+                  action: campaigns
+                  params:
+                    customer_id: "123-456-7890"
+                    date_range:
+                      start_date: "2026-02-01"
+                      end_date: "2026-02-28"
+              hubspot_create_contact:
+                summary: Create a HubSpot contact
+                value:
+                  client: chatgpt-plugin
+                  api: hubspot
+                  action: create_contact
+                  params:
+                    email: jane.doe@example.com
+                    firstname: Jane
+                    lastname: Doe
+                    company: Acme Inc
+              ga4_report:
+                summary: Run a GA4 report
+                value:
+                  client: gemini-agent
+                  api: ga4
+                  action: report
+                  params:
+                    property_id: "properties/123456789"
+                    date_range:
+                      start_date: "2026-01-01"
+                      end_date: "2026-02-28"
+                    fields:
+                      - sessions
+                      - pageviews
+                      - bounceRate
+                  options:
+                    cache: true
+                    cache_ttl_seconds: 600
+              slack_message:
+                summary: Send a Slack message
+                value:
+                  client: internal-automation
+                  api: slack
+                  action: send_message
+                  params:
+                    channel: "#alerts"
+                    text: "Daily report generated successfully."
+              salesforce_soql:
+                summary: Run a Salesforce SOQL query
+                value:
+                  client: claude-desktop
+                  api: salesforce
+                  action: soql
+                  params:
+                    query: "SELECT Id, Name, Amount FROM Opportunity WHERE StageName = 'Closed Won' AND CloseDate = THIS_QUARTER"
+                    limit: 100
+      responses:
+        '200':
+          description: API action executed successfully
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: Unique request identifier for tracing
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Number of remaining requests in the current rate limit window
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Unix timestamp when the rate limit resets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatewaySuccessResponse'
+              example:
+                success: true
+                data:
+                  campaigns:
+                    - id: "123456"
+                      name: "Brand Awareness Q1"
+                      status: "ENABLED"
+                      budget: 5000
+                      impressions: 150000
+                      clicks: 4500
+                      cost: 3200.50
+                metadata:
+                  request_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  api: google_ads
+                  action: campaigns
+                  duration_ms: 245
+                  cached: false
+                  rate_limit_remaining: 55
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_field:
+                  summary: Missing required field
+                  value:
+                    success: false
+                    error:
+                      code: INVALID_REQUEST
+                      message: "Missing required field: 'api'"
+                      details:
+                        missing_fields:
+                          - api
+                unknown_api:
+                  summary: Unknown API
+                  value:
+                    success: false
+                    error:
+                      code: UNKNOWN_API
+                      message: "Unknown API: 'invalid_api'. Use /api-discovery to see available APIs."
+                invalid_action:
+                  summary: Invalid action for API
+                  value:
+                    success: false
+                    error:
+                      code: INVALID_ACTION
+                      message: "Action 'invalid_action' is not supported for API 'google_ads'. Available actions: campaigns, ad_groups, ads, keywords, metrics, create_campaign"
+                missing_params:
+                  summary: Missing required parameters
+                  value:
+                    success: false
+                    error:
+                      code: MISSING_PARAMS
+                      message: "Missing required parameter 'customer_id' for API 'google_ads'"
+                      details:
+                        required_params:
+                          - customer_id
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+                example: 0
+              description: Remaining requests (0 when rate limited)
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Unix timestamp when the rate limit resets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMITED
+                  message: "Rate limit exceeded for API 'google_ads'. Retry after 45 seconds."
+                  details:
+                    api: google_ads
+                    limit: 60
+                    window: "per_minute"
+                    retry_after_seconds: 45
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INTERNAL_ERROR
+                  message: "An unexpected error occurred. Please try again or contact support."
+                  details:
+                    request_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        '502':
+          description: Upstream API error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: API_ERROR
+                  message: "Upstream API 'google_ads' returned an error."
+                  details:
+                    upstream_status: 503
+                    upstream_message: "Service temporarily unavailable"
+        '504':
+          description: Gateway timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: TIMEOUT
+                  message: "Request to 'google_ads' timed out after 30000ms."
+
+  /health-check:
+    get:
+      tags:
+        - Operations
+      summary: Check gateway and API health status
+      description: |
+        Returns the health status of the gateway and optionally all connected APIs.
+        Use this endpoint to verify the gateway is operational and to check
+        individual API connectivity.
+      operationId: healthCheck
+      parameters:
+        - name: detailed
+          in: query
+          description: Include individual API health status
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: api
+          in: query
+          description: Check health for a specific API only
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Health check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              examples:
+                healthy:
+                  summary: All systems healthy
+                  value:
+                    success: true
+                    status: healthy
+                    timestamp: "2026-03-02T12:00:00Z"
+                    version: "2.0.0"
+                    uptime_seconds: 86400
+                    checks:
+                      gateway: healthy
+                      total_apis: 30
+                      healthy_apis: 30
+                      degraded_apis: 0
+                      unhealthy_apis: 0
+                detailed:
+                  summary: Detailed health check
+                  value:
+                    success: true
+                    status: healthy
+                    timestamp: "2026-03-02T12:00:00Z"
+                    version: "2.0.0"
+                    uptime_seconds: 86400
+                    checks:
+                      gateway: healthy
+                      total_apis: 30
+                      healthy_apis: 29
+                      degraded_apis: 1
+                      unhealthy_apis: 0
+                    apis:
+                      google_ads:
+                        status: healthy
+                        latency_ms: 120
+                        last_checked: "2026-03-02T11:59:00Z"
+                      meta_ads:
+                        status: degraded
+                        latency_ms: 2500
+                        last_checked: "2026-03-02T11:59:00Z"
+                        message: "High latency detected"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Gateway unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              example:
+                success: false
+                status: unhealthy
+                timestamp: "2026-03-02T12:00:00Z"
+                version: "2.0.0"
+                checks:
+                  gateway: unhealthy
+                  message: "Critical services unavailable"
+
+  /run-tests:
+    post:
+      tags:
+        - Operations
+      summary: Run integration tests against connected APIs
+      description: |
+        Executes a suite of integration tests to verify connectivity and basic
+        functionality for all or specific APIs. Returns detailed pass/fail results
+        for each test case.
+
+        **Warning**: This endpoint makes real API calls. Use with caution in
+        production environments. Consider using the `dry_run` option when possible.
+      operationId: runTests
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apis:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    List of API identifiers to test. If empty, tests all APIs.
+                  example:
+                    - google_ads
+                    - hubspot
+                    - slack
+                test_level:
+                  type: string
+                  enum:
+                    - connectivity
+                    - basic
+                    - full
+                  default: basic
+                  description: |
+                    Level of testing to perform:
+                    - connectivity: Only test authentication and reachability
+                    - basic: Test basic read operations
+                    - full: Test read and write operations (use with caution)
+                dry_run:
+                  type: boolean
+                  default: false
+                  description: Validate test configuration without executing
+            examples:
+              test_all:
+                summary: Test all APIs
+                value:
+                  apis: []
+                  test_level: connectivity
+              test_specific:
+                summary: Test specific APIs
+                value:
+                  apis:
+                    - google_ads
+                    - hubspot
+                    - slack
+                  test_level: basic
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResultsResponse'
+              example:
+                success: true
+                summary:
+                  total: 3
+                  passed: 2
+                  failed: 1
+                  skipped: 0
+                  duration_ms: 5430
+                results:
+                  - api: google_ads
+                    status: passed
+                    tests:
+                      - name: authentication
+                        status: passed
+                        duration_ms: 320
+                      - name: list_campaigns
+                        status: passed
+                        duration_ms: 450
+                  - api: hubspot
+                    status: passed
+                    tests:
+                      - name: authentication
+                        status: passed
+                        duration_ms: 180
+                      - name: list_contacts
+                        status: passed
+                        duration_ms: 210
+                  - api: slack
+                    status: failed
+                    tests:
+                      - name: authentication
+                        status: failed
+                        duration_ms: 150
+                        error: "Invalid auth token"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+      description: |
+        API key for authenticating gateway requests. Obtain from the platform team.
+        Include in all requests as the `X-API-KEY` header.
+
+  schemas:
+    GatewayRequest:
+      type: object
+      required:
+        - client
+        - api
+        - action
+      properties:
+        client:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Client identifier for tracking and auditing
+          example: claude-desktop
+        api:
+          type: string
+          description: Target API identifier
+          enum:
+            - google_ads
+            - meta_ads
+            - linkedin_ads
+            - tiktok_ads
+            - twitter_ads
+            - hubspot
+            - salesforce
+            - pipedrive
+            - ga4
+            - search_console
+            - mixpanel
+            - hotjar
+            - gmail
+            - calendar
+            - drive
+            - sheets
+            - slack
+            - microsoft_teams
+            - sendgrid
+            - twilio
+            - asana
+            - jira
+            - notion
+            - trello
+            - shopify
+            - stripe
+            - openai
+            - anthropic
+            - airtable
+            - supabase
+        action:
+          type: string
+          minLength: 1
+          description: Action to perform on the target API
+          example: campaigns
+        params:
+          type: object
+          additionalProperties: true
+          description: Action-specific parameters
+        options:
+          type: object
+          properties:
+            timeout_ms:
+              type: integer
+              minimum: 1000
+              maximum: 120000
+              default: 30000
+            retry:
+              type: boolean
+              default: true
+            max_retries:
+              type: integer
+              minimum: 0
+              maximum: 5
+              default: 3
+            cache:
+              type: boolean
+              default: false
+            cache_ttl_seconds:
+              type: integer
+              minimum: 30
+              maximum: 3600
+              default: 300
+            dry_run:
+              type: boolean
+              default: false
+        metadata:
+          type: object
+          properties:
+            request_id:
+              type: string
+              format: uuid
+            correlation_id:
+              type: string
+            source:
+              type: string
+            priority:
+              type: string
+              enum:
+                - low
+                - normal
+                - high
+                - critical
+              default: normal
+
+    GatewaySuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          description: Response payload from the target API
+        metadata:
+          type: object
+          properties:
+            request_id:
+              type: string
+              format: uuid
+            api:
+              type: string
+            action:
+              type: string
+            duration_ms:
+              type: integer
+            cached:
+              type: boolean
+            rate_limit_remaining:
+              type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_REQUEST
+                - UNKNOWN_API
+                - INVALID_ACTION
+                - MISSING_PARAMS
+                - AUTH_FAILED
+                - RATE_LIMITED
+                - TIMEOUT
+                - API_ERROR
+                - INTERNAL_ERROR
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+    DiscoveryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            total_apis:
+              type: integer
+            categories:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    actions:
+                      type: array
+                      items:
+                        type: string
+                    required_params:
+                      type: array
+                      items:
+                        type: string
+                    rate_limits:
+                      type: object
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        uptime_seconds:
+          type: integer
+        checks:
+          type: object
+          properties:
+            gateway:
+              type: string
+              enum:
+                - healthy
+                - degraded
+                - unhealthy
+            total_apis:
+              type: integer
+            healthy_apis:
+              type: integer
+            degraded_apis:
+              type: integer
+            unhealthy_apis:
+              type: integer
+        apis:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum:
+                  - healthy
+                  - degraded
+                  - unhealthy
+              latency_ms:
+                type: integer
+              last_checked:
+                type: string
+                format: date-time
+              message:
+                type: string
+
+    TestResultsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            passed:
+              type: integer
+            failed:
+              type: integer
+            skipped:
+              type: integer
+            duration_ms:
+              type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              api:
+                type: string
+              status:
+                type: string
+                enum:
+                  - passed
+                  - failed
+                  - skipped
+              tests:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - passed
+                        - failed
+                        - skipped
+                    duration_ms:
+                      type: integer
+                    error:
+                      type: string
+
+  responses:
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: AUTH_FAILED
+              message: "Invalid or missing API key. Include a valid key in the X-API-KEY header."

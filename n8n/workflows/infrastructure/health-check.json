@@ -1,0 +1,124 @@
+{
+  "name": "Infrastructure: Health Check (Scheduled)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const apis = [\n  { name: 'google_ads', url: 'https://googleads.googleapis.com/$discovery/rest', method: 'GET' },\n  { name: 'hubspot', url: 'https://api.hubspot.com/health', method: 'GET' },\n  { name: 'salesforce', url: 'https://login.salesforce.com/.well-known/openid-configuration', method: 'GET' },\n  { name: 'ga4', url: 'https://analyticsdata.googleapis.com/$discovery/rest', method: 'GET' }\n];\n\nreturn apis.map(api => ({ json: api }));"
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000002",
+      "name": "Check APIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000003",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [710, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000004",
+      "name": "Ping API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 400],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all().map(item => ({\n  api: item.json.name || 'unknown',\n  status: item.json.error ? 'unhealthy' : 'healthy',\n  response_time_ms: item.json.response_time || 0,\n  checked_at: new Date().toISOString()\n}));\n\nreturn [{ json: { health_report: results, checked_at: new Date().toISOString() } }];"
+      },
+      "id": "d4e5f6a7-4001-4d01-b004-000000000005",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1170, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check APIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check APIs": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ping API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping API": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

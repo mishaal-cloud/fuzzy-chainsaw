@@ -1,0 +1,463 @@
+{
+  "name": "Main API Gateway",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "api-gateway",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "api-gateway-main"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\n// Validate required fields\nconst errors = [];\nif (!body.client) errors.push('Missing required field: client');\nif (!body.api) errors.push('Missing required field: api');\nif (!body.action) errors.push('Missing required field: action');\n\nif (errors.length > 0) {\n  return [{\n    json: {\n      error: true,\n      status_code: 400,\n      message: 'Invalid request',\n      validation_errors: errors,\n      usage: 'POST /api-gateway with body: { client: \"string\", api: \"string\", action: \"string\", params: {} }'\n    }\n  }];\n}\n\n// Normalize and enrich\nreturn [{\n  json: {\n    request_id: $execution.id,\n    timestamp: new Date().toISOString(),\n    client: body.client.toLowerCase().trim(),\n    api: body.api.toLowerCase().trim(),\n    action: body.action.toLowerCase().trim(),\n    params: body.params || {},\n    raw_body: body\n  }\n}];"
+      },
+      "id": "a1b2c3d4-2222-4000-8000-000000000002",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-check-validation-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-3333-4000-8000-000000000003",
+      "name": "Check Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1b2c3d4-4444-4000-8000-000000000004",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [780, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "const api = $json.api;\n\nconst routingTable = {\n  // Marketing Ads\n  google_ads: 'marketing_ads',\n  meta_ads: 'marketing_ads',\n  facebook_ads: 'marketing_ads',\n  linkedin_ads: 'marketing_ads',\n  tiktok_ads: 'marketing_ads',\n\n  // CRM\n  hubspot: 'crm',\n  salesforce: 'crm',\n  pipedrive: 'crm',\n\n  // Analytics\n  ga4: 'analytics',\n  google_analytics: 'analytics',\n  search_console: 'analytics',\n\n  // Google Suite\n  gmail: 'google_suite',\n  calendar: 'google_suite',\n  google_calendar: 'google_suite',\n  drive: 'google_suite',\n  google_drive: 'google_suite',\n  sheets: 'google_suite',\n  google_sheets: 'google_suite'\n};\n\nconst category = routingTable[api];\nif (!category) {\n  return [{\n    json: {\n      error: true,\n      status_code: 404,\n      message: `Unknown API: ${api}`,\n      available_apis: Object.keys(routingTable),\n      suggestion: 'Call GET /api-discovery for the full API catalog'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...$json,\n    routeTo: category\n  }\n}];"
+      },
+      "id": "a1b2c3d4-5555-4000-8000-000000000005",
+      "name": "Route Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 440]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-check-route-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-6666-4000-8000-000000000006",
+      "name": "Check Route",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 440]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "a1b2c3d4-7777-4000-8000-000000000007",
+      "name": "Route Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeTo }}",
+                    "rightValue": "marketing_ads",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Marketing Ads"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeTo }}",
+                    "rightValue": "crm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "CRM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeTo }}",
+                    "rightValue": "analytics",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Analytics"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.routeTo }}",
+                    "rightValue": "google_suite",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Google Suite"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-8888-4000-8000-000000000008",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1300, 580]
+    },
+    {
+      "parameters": {
+        "source": "parameter",
+        "workflowId": "={{ /* PLACEHOLDER: marketing-ads-handler workflow ID */ }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-9999-4000-8000-000000000009",
+      "name": "Execute Marketing",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1580, 340]
+    },
+    {
+      "parameters": {
+        "source": "parameter",
+        "workflowId": "={{ /* PLACEHOLDER: crm-handler workflow ID */ }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-aaaa-4000-8000-000000000010",
+      "name": "Execute CRM",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1580, 520]
+    },
+    {
+      "parameters": {
+        "source": "parameter",
+        "workflowId": "={{ /* PLACEHOLDER: analytics-handler workflow ID */ }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-bbbb-4000-8000-000000000011",
+      "name": "Execute Analytics",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1580, 700]
+    },
+    {
+      "parameters": {
+        "source": "parameter",
+        "workflowId": "={{ /* PLACEHOLDER: google-suite-handler workflow ID */ }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-cccc-4000-8000-000000000012",
+      "name": "Execute Google Suite",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1580, 880]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nreturn [{\n  json: {\n    success: !result.error,\n    request_id: $('Validate Request').first().json.request_id,\n    timestamp: new Date().toISOString(),\n    api: $('Validate Request').first().json.api,\n    action: $('Validate Request').first().json.action,\n    data: result.error ? undefined : result,\n    error: result.error ? result : undefined\n  }\n}];"
+      },
+      "id": "a1b2c3d4-dddd-4000-8000-000000000013",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1860, 580]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-eeee-4000-8000-000000000014",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2120, 580]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Check Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Validation": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Request": {
+      "main": [
+        [
+          {
+            "node": "Check Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Route": {
+      "main": [
+        [
+          {
+            "node": "Route Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Execute Marketing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Google Suite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Marketing": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute CRM": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Analytics": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Google Suite": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

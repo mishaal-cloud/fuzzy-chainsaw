@@ -1,0 +1,479 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-03-02",
+  "instance_url": "https://mmurawala.app.n8n.cloud",
+  "webhook_base": "https://mmurawala.app.n8n.cloud/webhook",
+  "categories": {
+    "marketing_ads": {
+      "google_ads": {
+        "name": "Google Ads",
+        "base_url": "https://googleads.googleapis.com/v17",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GOOGLE_ADS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 15000
+        },
+        "required_params": ["customer_id"],
+        "actions": ["campaigns", "ad_groups", "ads", "keywords", "metrics", "create_campaign"],
+        "documentation": "https://developers.google.com/google-ads/api/docs/start",
+        "health_check_endpoint": "/customers/{customer_id}",
+        "timeout_ms": 30000
+      },
+      "meta_ads": {
+        "name": "Meta/Facebook Ads",
+        "base_url": "https://graph.facebook.com/v19.0",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_META_ADS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 200,
+          "daily_quota": 50000
+        },
+        "required_params": ["ad_account_id"],
+        "actions": ["campaigns", "ad_sets", "ads", "insights", "create_campaign"],
+        "documentation": "https://developers.facebook.com/docs/marketing-apis",
+        "health_check_endpoint": "/me",
+        "timeout_ms": 30000
+      },
+      "linkedin_ads": {
+        "name": "LinkedIn Ads",
+        "base_url": "https://api.linkedin.com/v2",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_LINKEDIN_ADS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 80,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["campaigns", "analytics", "create_campaign"],
+        "documentation": "https://learn.microsoft.com/en-us/linkedin/marketing/",
+        "health_check_endpoint": "/me",
+        "timeout_ms": 30000
+      },
+      "tiktok_ads": {
+        "name": "TikTok Ads",
+        "base_url": "https://business-api.tiktok.com/open_api/v1.3",
+        "auth_type": "api_key",
+        "credential_key": "PROD_TIKTOK_ADS_KEY",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 10000
+        },
+        "required_params": ["advertiser_id"],
+        "actions": ["campaigns", "ad_groups", "reports"],
+        "documentation": "https://business-api.tiktok.com/portal/docs",
+        "health_check_endpoint": "/oauth2/advertiser/get/",
+        "timeout_ms": 30000
+      },
+      "twitter_ads": {
+        "name": "Twitter/X Ads",
+        "base_url": "https://ads-api.twitter.com/12",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_TWITTER_ADS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 10000
+        },
+        "required_params": ["account_id"],
+        "actions": ["campaigns", "line_items", "analytics"],
+        "documentation": "https://developer.twitter.com/en/docs/twitter-ads-api",
+        "health_check_endpoint": "/accounts",
+        "timeout_ms": 30000
+      }
+    },
+    "crm": {
+      "hubspot": {
+        "name": "HubSpot",
+        "base_url": "https://api.hubapi.com",
+        "auth_type": "app_token",
+        "credential_key": "PROD_HUBSPOT_TOKEN",
+        "rate_limits": {
+          "requests_per_second": 10,
+          "daily_quota": 500000
+        },
+        "required_params": [],
+        "actions": ["contacts", "companies", "deals", "create_contact", "create_deal", "pipelines", "tickets", "engagements"],
+        "documentation": "https://developers.hubspot.com/docs/api/overview",
+        "health_check_endpoint": "/crm/v3/objects/contacts?limit=1",
+        "timeout_ms": 15000
+      },
+      "salesforce": {
+        "name": "Salesforce",
+        "base_url": "https://login.salesforce.com",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_SALESFORCE_OAUTH2",
+        "rate_limits": {
+          "requests_per_day": 15000
+        },
+        "required_params": [],
+        "actions": ["accounts", "contacts", "opportunities", "leads", "create_lead", "soql", "create_account", "create_opportunity"],
+        "documentation": "https://developer.salesforce.com/docs/apis",
+        "health_check_endpoint": "/services/data/v59.0/",
+        "timeout_ms": 30000
+      },
+      "pipedrive": {
+        "name": "Pipedrive",
+        "base_url": "https://api.pipedrive.com/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_PIPEDRIVE_KEY",
+        "rate_limits": {
+          "requests_per_second": 10,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["deals", "persons", "organizations", "activities", "create_deal", "create_person"],
+        "documentation": "https://developers.pipedrive.com/docs/api/v1",
+        "health_check_endpoint": "/users/me",
+        "timeout_ms": 15000
+      }
+    },
+    "analytics": {
+      "ga4": {
+        "name": "Google Analytics 4",
+        "base_url": "https://analyticsdata.googleapis.com/v1beta",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GA4_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 50000
+        },
+        "required_params": ["property_id"],
+        "actions": ["report", "realtime", "audiences", "dimensions", "metrics"],
+        "documentation": "https://developers.google.com/analytics/devguides/reporting/data/v1",
+        "health_check_endpoint": "/properties/{property_id}/metadata",
+        "timeout_ms": 30000
+      },
+      "search_console": {
+        "name": "Google Search Console",
+        "base_url": "https://searchconsole.googleapis.com/v1",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_SEARCH_CONSOLE_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60
+        },
+        "required_params": ["site_url"],
+        "actions": ["performance", "sitemaps", "inspect_url"],
+        "documentation": "https://developers.google.com/webmaster-tools/v1/api_reference_index",
+        "health_check_endpoint": "/sites",
+        "timeout_ms": 30000
+      },
+      "mixpanel": {
+        "name": "Mixpanel",
+        "base_url": "https://mixpanel.com/api/2.0",
+        "auth_type": "api_key",
+        "credential_key": "PROD_MIXPANEL_KEY",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 50000
+        },
+        "required_params": ["project_id"],
+        "actions": ["events", "funnels", "retention", "export"],
+        "documentation": "https://developer.mixpanel.com/reference/overview",
+        "health_check_endpoint": "/engage",
+        "timeout_ms": 30000
+      },
+      "hotjar": {
+        "name": "Hotjar",
+        "base_url": "https://api.hotjar.com/v2",
+        "auth_type": "api_key",
+        "credential_key": "PROD_HOTJAR_KEY",
+        "rate_limits": {
+          "requests_per_minute": 30,
+          "daily_quota": 10000
+        },
+        "required_params": ["site_id"],
+        "actions": ["heatmaps", "recordings", "surveys"],
+        "documentation": "https://developer.hotjar.com/",
+        "health_check_endpoint": "/sites",
+        "timeout_ms": 15000
+      }
+    },
+    "google_suite": {
+      "gmail": {
+        "name": "Gmail",
+        "base_url": "https://gmail.googleapis.com/gmail/v1",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GMAIL_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 250,
+          "daily_quota": 1000000
+        },
+        "required_params": [],
+        "actions": ["list", "read", "send", "search", "draft", "labels"],
+        "documentation": "https://developers.google.com/gmail/api/reference/rest",
+        "health_check_endpoint": "/users/me/profile",
+        "timeout_ms": 15000
+      },
+      "calendar": {
+        "name": "Google Calendar",
+        "base_url": "https://www.googleapis.com/calendar/v3",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GCAL_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 100
+        },
+        "required_params": [],
+        "actions": ["events", "create_event", "update_event", "delete_event", "calendars"],
+        "documentation": "https://developers.google.com/calendar/api/v3/reference",
+        "health_check_endpoint": "/users/me/calendarList",
+        "timeout_ms": 15000
+      },
+      "drive": {
+        "name": "Google Drive",
+        "base_url": "https://www.googleapis.com/drive/v3",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GDRIVE_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 100
+        },
+        "required_params": [],
+        "actions": ["list", "download", "upload", "search", "share", "create_folder"],
+        "documentation": "https://developers.google.com/drive/api/v3/reference",
+        "health_check_endpoint": "/about?fields=user",
+        "timeout_ms": 30000
+      },
+      "sheets": {
+        "name": "Google Sheets",
+        "base_url": "https://sheets.googleapis.com/v4",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_GSHEETS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60
+        },
+        "required_params": [],
+        "actions": ["read", "write", "append", "create", "batch_update"],
+        "documentation": "https://developers.google.com/sheets/api/reference/rest",
+        "health_check_endpoint": "/spreadsheets/{spreadsheet_id}",
+        "timeout_ms": 15000
+      }
+    },
+    "communication": {
+      "slack": {
+        "name": "Slack",
+        "base_url": "https://slack.com/api",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_SLACK_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["send_message", "channels", "users", "files", "reactions"],
+        "documentation": "https://api.slack.com/methods",
+        "health_check_endpoint": "/auth.test",
+        "timeout_ms": 10000
+      },
+      "microsoft_teams": {
+        "name": "Microsoft Teams",
+        "base_url": "https://graph.microsoft.com/v1.0",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_MSTEAMS_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 120,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["send_message", "channels", "teams", "chats"],
+        "documentation": "https://learn.microsoft.com/en-us/graph/api/resources/teams-api-overview",
+        "health_check_endpoint": "/me",
+        "timeout_ms": 15000
+      },
+      "sendgrid": {
+        "name": "SendGrid",
+        "base_url": "https://api.sendgrid.com/v3",
+        "auth_type": "api_key",
+        "credential_key": "PROD_SENDGRID_KEY",
+        "rate_limits": {
+          "requests_per_second": 10,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["send_email", "templates", "contacts", "lists", "stats"],
+        "documentation": "https://docs.sendgrid.com/api-reference",
+        "health_check_endpoint": "/user/profile",
+        "timeout_ms": 15000
+      },
+      "twilio": {
+        "name": "Twilio",
+        "base_url": "https://api.twilio.com/2010-04-01",
+        "auth_type": "api_key",
+        "credential_key": "PROD_TWILIO_KEY",
+        "rate_limits": {
+          "requests_per_second": 100,
+          "daily_quota": 500000
+        },
+        "required_params": ["account_sid"],
+        "actions": ["send_sms", "make_call", "messages", "calls"],
+        "documentation": "https://www.twilio.com/docs/usage/api",
+        "health_check_endpoint": "/Accounts/{account_sid}.json",
+        "timeout_ms": 15000
+      }
+    },
+    "project_management": {
+      "asana": {
+        "name": "Asana",
+        "base_url": "https://app.asana.com/api/1.0",
+        "auth_type": "oauth2",
+        "credential_key": "PROD_ASANA_OAUTH2",
+        "rate_limits": {
+          "requests_per_minute": 150,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["tasks", "projects", "workspaces", "create_task", "update_task"],
+        "documentation": "https://developers.asana.com/docs",
+        "health_check_endpoint": "/users/me",
+        "timeout_ms": 15000
+      },
+      "jira": {
+        "name": "Jira",
+        "base_url": "https://your-domain.atlassian.net/rest/api/3",
+        "auth_type": "api_key",
+        "credential_key": "PROD_JIRA_KEY",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 50000
+        },
+        "required_params": ["project_key"],
+        "actions": ["issues", "create_issue", "update_issue", "search", "transitions"],
+        "documentation": "https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/",
+        "health_check_endpoint": "/myself",
+        "timeout_ms": 15000
+      },
+      "notion": {
+        "name": "Notion",
+        "base_url": "https://api.notion.com/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_NOTION_KEY",
+        "rate_limits": {
+          "requests_per_second": 3,
+          "daily_quota": 50000
+        },
+        "required_params": [],
+        "actions": ["pages", "databases", "blocks", "create_page", "query_database"],
+        "documentation": "https://developers.notion.com/reference",
+        "health_check_endpoint": "/users/me",
+        "timeout_ms": 15000
+      },
+      "trello": {
+        "name": "Trello",
+        "base_url": "https://api.trello.com/1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_TRELLO_KEY",
+        "rate_limits": {
+          "requests_per_second": 10,
+          "daily_quota": 100000
+        },
+        "required_params": [],
+        "actions": ["boards", "lists", "cards", "create_card", "move_card"],
+        "documentation": "https://developer.atlassian.com/cloud/trello/rest/",
+        "health_check_endpoint": "/members/me",
+        "timeout_ms": 15000
+      }
+    },
+    "ecommerce": {
+      "shopify": {
+        "name": "Shopify",
+        "base_url": "https://{shop}.myshopify.com/admin/api/2024-01",
+        "auth_type": "api_key",
+        "credential_key": "PROD_SHOPIFY_KEY",
+        "rate_limits": {
+          "requests_per_second": 2,
+          "daily_quota": 50000
+        },
+        "required_params": ["shop"],
+        "actions": ["products", "orders", "customers", "inventory", "create_product"],
+        "documentation": "https://shopify.dev/docs/api/admin-rest",
+        "health_check_endpoint": "/shop.json",
+        "timeout_ms": 15000
+      },
+      "stripe": {
+        "name": "Stripe",
+        "base_url": "https://api.stripe.com/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_STRIPE_KEY",
+        "rate_limits": {
+          "requests_per_second": 100,
+          "daily_quota": 500000
+        },
+        "required_params": [],
+        "actions": ["charges", "customers", "subscriptions", "invoices", "payments", "refunds"],
+        "documentation": "https://stripe.com/docs/api",
+        "health_check_endpoint": "/balance",
+        "timeout_ms": 15000
+      }
+    },
+    "ai_ml": {
+      "openai": {
+        "name": "OpenAI",
+        "base_url": "https://api.openai.com/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_OPENAI_KEY",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 10000
+        },
+        "required_params": [],
+        "actions": ["chat_completion", "embeddings", "images", "audio"],
+        "documentation": "https://platform.openai.com/docs/api-reference",
+        "health_check_endpoint": "/models",
+        "timeout_ms": 60000
+      },
+      "anthropic": {
+        "name": "Anthropic Claude",
+        "base_url": "https://api.anthropic.com/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_ANTHROPIC_KEY",
+        "rate_limits": {
+          "requests_per_minute": 60,
+          "daily_quota": 10000
+        },
+        "required_params": [],
+        "actions": ["messages", "completions"],
+        "documentation": "https://docs.anthropic.com/en/docs/api-reference",
+        "health_check_endpoint": "/messages",
+        "timeout_ms": 60000
+      }
+    },
+    "data_storage": {
+      "airtable": {
+        "name": "Airtable",
+        "base_url": "https://api.airtable.com/v0",
+        "auth_type": "api_key",
+        "credential_key": "PROD_AIRTABLE_KEY",
+        "rate_limits": {
+          "requests_per_second": 5,
+          "daily_quota": 100000
+        },
+        "required_params": ["base_id"],
+        "actions": ["list_records", "create_record", "update_record", "delete_record"],
+        "documentation": "https://airtable.com/developers/web/api/introduction",
+        "health_check_endpoint": "/meta/bases",
+        "timeout_ms": 15000
+      },
+      "supabase": {
+        "name": "Supabase",
+        "base_url": "https://{project_ref}.supabase.co/rest/v1",
+        "auth_type": "api_key",
+        "credential_key": "PROD_SUPABASE_KEY",
+        "rate_limits": {
+          "requests_per_second": 100,
+          "daily_quota": 500000
+        },
+        "required_params": ["project_ref"],
+        "actions": ["select", "insert", "update", "delete", "rpc"],
+        "documentation": "https://supabase.com/docs/guides/api",
+        "health_check_endpoint": "/",
+        "timeout_ms": 15000
+      }
+    }
+  },
+  "metadata": {
+    "total_apis": 30,
+    "total_categories": 8,
+    "supported_auth_types": ["oauth2", "api_key", "app_token", "webhook"],
+    "default_timeout_ms": 30000,
+    "default_retry_attempts": 3,
+    "retry_backoff_ms": [1000, 2000, 4000]
+  }
+}

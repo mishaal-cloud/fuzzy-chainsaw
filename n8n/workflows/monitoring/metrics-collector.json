@@ -1,0 +1,202 @@
+{
+  "name": "Monitor: Metrics Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare n8n API request to fetch recent executions\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\nconst now = new Date();\nconst fiveMinAgo = new Date(now - 5 * 60 * 1000);\n\nreturn [{\n  json: {\n    url: `${baseUrl}/api/v1/executions`,\n    params: {\n      status: 'all',\n      limit: 250,\n      startedAfter: fiveMinAgo.toISOString(),\n      startedBefore: now.toISOString()\n    },\n    timestamp: now.toISOString()\n  }\n}];"
+      },
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "name": "Prepare API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "={{ $json.params.limit }}"
+            },
+            {
+              "name": "startedAfter",
+              "value": "={{ $json.params.startedAfter }}"
+            },
+            {
+              "name": "startedBefore",
+              "value": "={{ $json.params.startedBefore }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Fetch Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate execution metrics\nconst executions = $input.all();\nconst now = new Date();\nconst fiveMinAgo = new Date(now - 5 * 60 * 1000);\n\nconst metrics = {\n  period: { start: fiveMinAgo.toISOString(), end: now.toISOString() },\n  total_executions: executions.length,\n  successful: 0,\n  failed: 0,\n  running: 0,\n  avg_duration_ms: 0,\n  by_workflow: {},\n  error_rate: 0\n};\n\nlet totalDuration = 0;\nfor (const exec of executions) {\n  const e = exec.json;\n  if (e.status === 'success') metrics.successful++;\n  else if (e.status === 'error') metrics.failed++;\n  else if (e.status === 'running') metrics.running++;\n  \n  if (e.stoppedAt && e.startedAt) {\n    totalDuration += new Date(e.stoppedAt) - new Date(e.startedAt);\n  }\n  \n  const wfName = e.workflowName || 'unknown';\n  if (!metrics.by_workflow[wfName]) {\n    metrics.by_workflow[wfName] = { total: 0, success: 0, failed: 0 };\n  }\n  metrics.by_workflow[wfName].total++;\n  if (e.status === 'success') metrics.by_workflow[wfName].success++;\n  if (e.status === 'error') metrics.by_workflow[wfName].failed++;\n}\n\nmetrics.avg_duration_ms = metrics.total_executions > 0 ? Math.round(totalDuration / metrics.total_executions) : 0;\nmetrics.error_rate = metrics.total_executions > 0 ? (metrics.failed / metrics.total_executions * 100).toFixed(2) + '%' : '0%';\n\nreturn [{ json: metrics }];"
+      },
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80",
+      "name": "Calculate Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format metrics for storage and downstream consumption\nconst metrics = $input.first().json;\n\nconst storageRecord = {\n  _id: `metrics_${Date.now()}`,\n  _timestamp: new Date().toISOString(),\n  _type: 'execution_metrics',\n  _version: '1.0',\n  \n  period_start: metrics.period.start,\n  period_end: metrics.period.end,\n  total_executions: metrics.total_executions,\n  successful: metrics.successful,\n  failed: metrics.failed,\n  running: metrics.running,\n  avg_duration_ms: metrics.avg_duration_ms,\n  error_rate: metrics.error_rate,\n  by_workflow: metrics.by_workflow,\n  \n  // Parsed error rate as number for threshold comparison\n  error_rate_numeric: parseFloat(metrics.error_rate) || 0\n};\n\nreturn [{ json: storageRecord }];"
+      },
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091",
+      "name": "Store Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102",
+              "leftValue": "={{ $json.error_rate_numeric }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102",
+      "name": "Check Thresholds",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"\\u26a0\\ufe0f High Error Rate Alert\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Error Rate:*\\n{{ $json.error_rate }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total Executions:*\\n{{ $json.total_executions }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Failed:*\\n{{ $json.failed }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Period:*\\n{{ $json.period_start }} - {{ $json.period_end }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Source: Monitor: Metrics Collector | Threshold: >5%\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213",
+      "name": "Alert Threshold Exceeded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare API Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Executions": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Store Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Metrics": {
+      "main": [
+        [
+          {
+            "node": "Check Thresholds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Thresholds": {
+      "main": [
+        [
+          {
+            "node": "Alert Threshold Exceeded",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

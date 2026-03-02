@@ -1,0 +1,94 @@
+{
+  "name": "Gateway: Google Suite",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c7d4e5f6-4001-4b8c-ad0e-4f5a6b7c8d9e",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { api, action, params } = $input.first().json;\n\nconst apiConfigs = {\n  gmail: {\n    base_url: 'https://gmail.googleapis.com/gmail/v1',\n    endpoints: {\n      list: { method: 'GET', path: '/users/me/messages', query: { maxResults: params.max_results || 20, q: params.query || '' } },\n      read: { method: 'GET', path: `/users/me/messages/${params.message_id || '{message_id}'}`, query: { format: params.format || 'full' } },\n      send: { method: 'POST', path: '/users/me/messages/send', body: { raw: Buffer.from(`To: ${params.to || ''}\\r\\nSubject: ${params.subject || ''}\\r\\nContent-Type: text/html; charset=utf-8\\r\\n\\r\\n${params.body || ''}`).toString('base64url') } },\n      search: { method: 'GET', path: '/users/me/messages', query: { maxResults: params.max_results || 50, q: params.query || '' } },\n      create: { method: 'POST', path: '/users/me/drafts', body: { message: { raw: Buffer.from(`To: ${params.to || ''}\\r\\nSubject: ${params.subject || ''}\\r\\nContent-Type: text/html; charset=utf-8\\r\\n\\r\\n${params.body || ''}`).toString('base64url') } } }\n    }\n  },\n  calendar: {\n    base_url: 'https://www.googleapis.com/calendar/v3',\n    endpoints: {\n      list: { method: 'GET', path: `/calendars/${encodeURIComponent(params.calendar_id || 'primary')}/events`, query: { timeMin: params.time_min || new Date().toISOString(), timeMax: params.time_max || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), maxResults: params.max_results || 50, singleEvents: true, orderBy: 'startTime' } },\n      read: { method: 'GET', path: `/calendars/${encodeURIComponent(params.calendar_id || 'primary')}/events/${params.event_id || '{event_id}'}`, query: {} },\n      create: { method: 'POST', path: `/calendars/${encodeURIComponent(params.calendar_id || 'primary')}/events`, body: { summary: params.summary || '', description: params.description || '', start: { dateTime: params.start, timeZone: params.timezone || 'UTC' }, end: { dateTime: params.end, timeZone: params.timezone || 'UTC' }, attendees: (params.attendees || []).map(e => ({ email: e })), reminders: { useDefault: true } } },\n      search: { method: 'GET', path: `/calendars/${encodeURIComponent(params.calendar_id || 'primary')}/events`, query: { q: params.query || '', timeMin: params.time_min || new Date().toISOString(), maxResults: params.max_results || 50, singleEvents: true, orderBy: 'startTime' } }\n    }\n  },\n  drive: {\n    base_url: 'https://www.googleapis.com/drive/v3',\n    endpoints: {\n      list: { method: 'GET', path: '/files', query: { q: params.folder_id ? `'${params.folder_id}' in parents and trashed = false` : 'trashed = false', pageSize: params.max_results || 100, fields: 'nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents)', orderBy: 'modifiedTime desc' } },\n      read: { method: 'GET', path: `/files/${params.file_id || '{file_id}'}`, query: { fields: 'id, name, mimeType, size, modifiedTime, webViewLink, description, parents, permissions' } },\n      create: { method: 'POST', path: '/files', body: { name: params.name || 'Untitled', mimeType: params.mime_type || 'application/vnd.google-apps.document', parents: params.folder_id ? [params.folder_id] : [], description: params.description || '' } },\n      search: { method: 'GET', path: '/files', query: { q: `name contains '${params.query || ''}' and trashed = false`, pageSize: params.max_results || 50, fields: 'nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink)', orderBy: 'modifiedTime desc' } }\n    }\n  },\n  sheets: {\n    base_url: 'https://sheets.googleapis.com/v4',\n    endpoints: {\n      list: { method: 'GET', path: `/spreadsheets/${params.spreadsheet_id || '{spreadsheet_id}'}`, query: { fields: 'spreadsheetId,properties.title,sheets.properties' } },\n      read: { method: 'GET', path: `/spreadsheets/${params.spreadsheet_id || '{spreadsheet_id}'}/values/${encodeURIComponent(params.range || 'Sheet1')}`, query: { valueRenderOption: params.render_option || 'FORMATTED_VALUE', dateTimeRenderOption: 'FORMATTED_STRING' } },\n      create: { method: 'POST', path: '/spreadsheets', body: { properties: { title: params.title || 'New Spreadsheet' }, sheets: [{ properties: { title: params.sheet_name || 'Sheet1' } }] } },\n      search: { method: 'GET', path: `/spreadsheets/${params.spreadsheet_id || '{spreadsheet_id}'}/values/${encodeURIComponent(params.range || 'Sheet1')}`, query: { valueRenderOption: 'FORMATTED_VALUE' } },\n      send: { method: 'PUT', path: `/spreadsheets/${params.spreadsheet_id || '{spreadsheet_id}'}/values/${encodeURIComponent(params.range || 'Sheet1')}`, query: { valueInputOption: params.input_option || 'USER_ENTERED' }, body: { range: params.range || 'Sheet1', majorDimension: 'ROWS', values: params.values || [] } }\n    }\n  }\n};\n\nconst config = apiConfigs[api];\nif (!config) {\n  return [{ json: { error: true, message: `Unknown Google Suite API: ${api}. Available: ${Object.keys(apiConfigs).join(', ')}` } }];\n}\n\nconst endpoint = config.endpoints[action];\nif (!endpoint) {\n  return [{ json: { error: true, message: `Unknown action '${action}' for ${api}. Available: ${Object.keys(config.endpoints).join(', ')}` } }];\n}\n\nreturn [{\n  json: {\n    method: endpoint.method,\n    url: config.base_url + endpoint.path,\n    query: endpoint.query || {},\n    body: endpoint.body || {},\n    api: api,\n    action: action\n  }\n}];"
+      },
+      "id": "c7d4e5f6-4002-4b8c-ad0e-4f5a6b7c8d9e",
+      "name": "Build API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c7d4e5f6-4003-4b8c-ad0e-4f5a6b7c8d9e",
+      "name": "Make API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst request = $('Build API Request').first().json;\n\nif (input.error || input.statusCode >= 400) {\n  return [{\n    json: {\n      error: true,\n      api: request.api,\n      action: request.action,\n      status_code: input.statusCode || 500,\n      message: input.message || input.error || 'API call failed',\n      raw_error: input\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    api: request.api,\n    action: request.action,\n    data: input.data || input.body || input,\n    metadata: {\n      timestamp: new Date().toISOString(),\n      execution_id: $execution.id\n    }\n  }\n}];"
+      },
+      "id": "c7d4e5f6-4004-4b8c-ad0e-4f5a6b7c8d9e",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Request": {
+      "main": [
+        [
+          {
+            "node": "Make API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make API Call": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

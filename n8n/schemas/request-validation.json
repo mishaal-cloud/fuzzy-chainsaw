@@ -1,0 +1,353 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Gateway Request",
+  "description": "JSON Schema for validating all requests to the n8n API Gateway webhook endpoint.",
+  "type": "object",
+  "required": ["client", "api", "action"],
+  "properties": {
+    "client": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Client identifier for tracking and auditing requests.",
+      "examples": ["claude-desktop", "chatgpt-plugin", "gemini-agent", "internal-dashboard"]
+    },
+    "api": {
+      "type": "string",
+      "enum": [
+        "google_ads",
+        "meta_ads",
+        "linkedin_ads",
+        "tiktok_ads",
+        "twitter_ads",
+        "hubspot",
+        "salesforce",
+        "pipedrive",
+        "ga4",
+        "search_console",
+        "mixpanel",
+        "hotjar",
+        "gmail",
+        "calendar",
+        "drive",
+        "sheets",
+        "slack",
+        "microsoft_teams",
+        "sendgrid",
+        "twilio",
+        "asana",
+        "jira",
+        "notion",
+        "trello",
+        "shopify",
+        "stripe",
+        "openai",
+        "anthropic",
+        "airtable",
+        "supabase"
+      ],
+      "description": "Target API identifier. Must match a registered API in the api-registry."
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The action to perform on the target API. Must be a valid action for the specified API.",
+      "examples": ["campaigns", "contacts", "send", "report", "create_contact"]
+    },
+    "params": {
+      "type": "object",
+      "description": "Action-specific parameters passed to the target API.",
+      "additionalProperties": true,
+      "properties": {
+        "customer_id": {
+          "type": "string",
+          "description": "Google Ads customer ID (required for google_ads API)."
+        },
+        "ad_account_id": {
+          "type": "string",
+          "description": "Meta Ads account ID (required for meta_ads API)."
+        },
+        "advertiser_id": {
+          "type": "string",
+          "description": "TikTok advertiser ID (required for tiktok_ads API)."
+        },
+        "property_id": {
+          "type": "string",
+          "description": "GA4 property ID (required for ga4 API)."
+        },
+        "site_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Site URL for Search Console (required for search_console API)."
+        },
+        "date_range": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "format": "date",
+              "description": "Start date in YYYY-MM-DD format."
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date",
+              "description": "End date in YYYY-MM-DD format."
+            }
+          },
+          "description": "Optional date range filter for analytics and reporting actions."
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional key-value filters for narrowing results."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 100,
+          "description": "Maximum number of results to return."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of results to skip for pagination."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific fields to include in the response."
+        },
+        "sort": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "description": "Sort configuration for results."
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "description": "Request-level options that modify gateway behavior.",
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 120000,
+          "default": 30000,
+          "description": "Request timeout in milliseconds."
+        },
+        "retry": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to retry on transient failures."
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 3,
+          "description": "Maximum number of retry attempts."
+        },
+        "cache": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to use cached response if available."
+        },
+        "cache_ttl_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3600,
+          "default": 300,
+          "description": "Cache time-to-live in seconds."
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, validate the request without executing. Useful for testing."
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata for tracking, logging, and correlation.",
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique request identifier for tracing. Auto-generated if not provided."
+        },
+        "correlation_id": {
+          "type": "string",
+          "description": "Correlation ID to link related requests across systems."
+        },
+        "source": {
+          "type": "string",
+          "description": "Originating system or workflow."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "normal", "high", "critical"],
+          "default": "normal",
+          "description": "Request priority for queue ordering."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "client": "claude-desktop",
+      "api": "google_ads",
+      "action": "campaigns",
+      "params": {
+        "customer_id": "123-456-7890",
+        "date_range": {
+          "start_date": "2026-02-01",
+          "end_date": "2026-02-28"
+        },
+        "limit": 50
+      },
+      "options": {
+        "timeout_ms": 30000,
+        "retry": true
+      }
+    },
+    {
+      "client": "chatgpt-plugin",
+      "api": "hubspot",
+      "action": "create_contact",
+      "params": {
+        "email": "jane.doe@example.com",
+        "firstname": "Jane",
+        "lastname": "Doe",
+        "company": "Acme Inc"
+      }
+    },
+    {
+      "client": "gemini-agent",
+      "api": "ga4",
+      "action": "report",
+      "params": {
+        "property_id": "properties/123456789",
+        "date_range": {
+          "start_date": "2026-01-01",
+          "end_date": "2026-02-28"
+        },
+        "fields": ["sessions", "pageviews", "bounceRate"]
+      },
+      "options": {
+        "cache": true,
+        "cache_ttl_seconds": 600
+      },
+      "metadata": {
+        "correlation_id": "weekly-report-2026-w09",
+        "priority": "normal"
+      }
+    },
+    {
+      "client": "internal-dashboard",
+      "api": "slack",
+      "action": "send_message",
+      "params": {
+        "channel": "#alerts",
+        "text": "Daily report generated successfully."
+      },
+      "options": {
+        "retry": true,
+        "max_retries": 2
+      }
+    }
+  ],
+  "definitions": {
+    "error_response": {
+      "type": "object",
+      "required": ["success", "error"],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "const": false
+        },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "INVALID_REQUEST",
+                "UNKNOWN_API",
+                "INVALID_ACTION",
+                "MISSING_PARAMS",
+                "AUTH_FAILED",
+                "RATE_LIMITED",
+                "TIMEOUT",
+                "API_ERROR",
+                "INTERNAL_ERROR"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "details": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "request_id": {
+          "type": "string"
+        }
+      }
+    },
+    "success_response": {
+      "type": "object",
+      "required": ["success", "data"],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "const": true
+        },
+        "data": {
+          "description": "Response payload from the target API."
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "request_id": {
+              "type": "string"
+            },
+            "api": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "duration_ms": {
+              "type": "integer"
+            },
+            "cached": {
+              "type": "boolean"
+            },
+            "rate_limit_remaining": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

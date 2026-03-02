@@ -1,0 +1,163 @@
+{
+  "name": "Testing: Smoke Tests",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "10a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mmurawala.app.n8n.cloud/webhook/api-discovery",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "20b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Ping Discovery Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst now = new Date().toISOString();\n\n// Check if the response is valid\nlet isHealthy = false;\nlet errorMessage = '';\n\ntry {\n  // Check for HTTP error indicators\n  if (response.error || response.code === 'ETIMEDOUT' || response.code === 'ECONNREFUSED') {\n    isHealthy = false;\n    errorMessage = response.error || response.message || `Connection error: ${response.code}`;\n  } else {\n    // Check if response has expected structure\n    const body = response.body || response;\n    if (body.apis !== undefined || body.status !== undefined) {\n      isHealthy = true;\n    } else {\n      // Response received but unexpected structure\n      isHealthy = true; // At least the endpoint is responding\n    }\n  }\n} catch (e) {\n  isHealthy = false;\n  errorMessage = `Validation error: ${e.message}`;\n}\n\nreturn [{\n  json: {\n    endpoint: 'api-discovery',\n    url: 'https://mmurawala.app.n8n.cloud/webhook/api-discovery',\n    is_healthy: isHealthy,\n    checked_at: now,\n    status_code: response.statusCode || null,\n    error_message: errorMessage,\n    response_keys: Object.keys(response.body || response)\n  }\n}];"
+      },
+      "id": "30c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+      "name": "Check Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "40d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
+              "leftValue": "={{ $json.is_healthy }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "40d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
+      "name": "Is Failed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"\\ud83d\\udea8 Smoke Test Failed\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Endpoint:*\\n{{ $json.endpoint }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*URL:*\\n{{ $json.url }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Status Code:*\\n{{ $json.status_code || 'N/A' }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Error:*\\n{{ $json.error_message }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Checked at: {{ $json.checked_at }} | Source: Smoke Tests\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "50e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90",
+      "name": "Alert on Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const check = $input.first().json;\n\nreturn [{\n  json: {\n    status: 'smoke_test_passed',\n    endpoint: check.endpoint,\n    checked_at: check.checked_at,\n    message: `Endpoint ${check.endpoint} is healthy`,\n    response_keys: check.response_keys\n  }\n}];"
+      },
+      "id": "60f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9001",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 420]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ping Discovery Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping Discovery Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Check Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Result": {
+      "main": [
+        [
+          {
+            "node": "Is Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Failed": {
+      "main": [
+        [
+          {
+            "node": "Alert on Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

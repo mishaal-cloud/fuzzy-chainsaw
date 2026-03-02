@@ -1,0 +1,94 @@
+{
+  "name": "Gateway: CRM",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e5b2c3d4-2001-4f6a-8b0c-2d3e4f5a6b7c",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { api, action, params } = $input.first().json;\n\nconst apiConfigs = {\n  hubspot: {\n    base_url: 'https://api.hubapi.com/crm/v3',\n    endpoints: {\n      contacts: { method: 'GET', path: '/objects/contacts', query: { limit: params.limit || 100, properties: 'email,firstname,lastname,phone,company' } },\n      companies: { method: 'GET', path: '/objects/companies', query: { limit: params.limit || 100, properties: 'name,domain,industry,numberofemployees' } },\n      deals: { method: 'GET', path: '/objects/deals', query: { limit: params.limit || 100, properties: 'dealname,amount,dealstage,closedate,pipeline' } },\n      leads: { method: 'GET', path: '/objects/contacts', query: { limit: params.limit || 100, properties: 'email,firstname,lastname,lifecyclestage', filterGroups: JSON.stringify([{ filters: [{ propertyName: 'lifecyclestage', operator: 'EQ', value: 'lead' }] }]) } },\n      pipelines: { method: 'GET', path: '/pipelines/deals', query: {} },\n      create_contact: { method: 'POST', path: '/objects/contacts', body: { properties: { email: params.email, firstname: params.firstname, lastname: params.lastname, phone: params.phone || '' } } },\n      create_deal: { method: 'POST', path: '/objects/deals', body: { properties: { dealname: params.dealname, amount: params.amount, dealstage: params.stage || 'appointmentscheduled', pipeline: params.pipeline || 'default' } } },\n      create_company: { method: 'POST', path: '/objects/companies', body: { properties: { name: params.name, domain: params.domain, industry: params.industry || '' } } }\n    }\n  },\n  salesforce: {\n    base_url: 'https://login.salesforce.com/services/data/v59.0',\n    endpoints: {\n      contacts: { method: 'GET', path: '/query', query: { q: params.query || 'SELECT Id, Name, Email, Phone, AccountId FROM Contact ORDER BY CreatedDate DESC LIMIT 100' } },\n      companies: { method: 'GET', path: '/query', query: { q: params.query || 'SELECT Id, Name, Industry, NumberOfEmployees, Website FROM Account ORDER BY CreatedDate DESC LIMIT 100' } },\n      deals: { method: 'GET', path: '/query', query: { q: params.query || `SELECT Id, Name, Amount, StageName, CloseDate FROM Opportunity ${params.stage ? \"WHERE StageName = '\" + params.stage + \"'\" : ''} ORDER BY CreatedDate DESC LIMIT 100` } },\n      leads: { method: 'GET', path: '/query', query: { q: params.query || `SELECT Id, Name, Email, Company, Status FROM Lead ${params.status ? \"WHERE Status = '\" + params.status + \"'\" : ''} ORDER BY CreatedDate DESC LIMIT 100` } },\n      pipelines: { method: 'GET', path: '/query', query: { q: 'SELECT Id, Name, StageName, Amount FROM Opportunity WHERE IsClosed = false ORDER BY StageName' } },\n      create_contact: { method: 'POST', path: '/sobjects/Contact', body: { FirstName: params.firstname, LastName: params.lastname, Email: params.email, Phone: params.phone || '' } },\n      create_lead: { method: 'POST', path: '/sobjects/Lead', body: { Company: params.company, FirstName: params.firstname, LastName: params.lastname, Email: params.email } },\n      create_deal: { method: 'POST', path: '/sobjects/Opportunity', body: { Name: params.dealname, Amount: params.amount, StageName: params.stage || 'Prospecting', CloseDate: params.close_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] } }\n    }\n  },\n  pipedrive: {\n    base_url: 'https://api.pipedrive.com/v1',\n    endpoints: {\n      contacts: { method: 'GET', path: '/persons', query: { start: 0, limit: params.limit || 100, sort: 'add_time DESC' } },\n      companies: { method: 'GET', path: '/organizations', query: { start: 0, limit: params.limit || 100, sort: 'add_time DESC' } },\n      deals: { method: 'GET', path: '/deals', query: { start: 0, limit: params.limit || 100, status: params.status || 'open', sort: 'add_time DESC' } },\n      leads: { method: 'GET', path: '/leads', query: { start: 0, limit: params.limit || 100 } },\n      pipelines: { method: 'GET', path: '/pipelines', query: {} },\n      create_contact: { method: 'POST', path: '/persons', body: { name: `${params.firstname || ''} ${params.lastname || ''}`.trim(), email: [{ value: params.email, primary: true }], phone: params.phone ? [{ value: params.phone, primary: true }] : [] } },\n      create_deal: { method: 'POST', path: '/deals', body: { title: params.dealname, value: params.amount, currency: params.currency || 'USD', status: 'open' } },\n      create_company: { method: 'POST', path: '/organizations', body: { name: params.name, address: params.address || '' } }\n    }\n  }\n};\n\nconst config = apiConfigs[api];\nif (!config) {\n  return [{ json: { error: true, message: `Unknown CRM API: ${api}. Available: ${Object.keys(apiConfigs).join(', ')}` } }];\n}\n\nconst endpoint = config.endpoints[action];\nif (!endpoint) {\n  return [{ json: { error: true, message: `Unknown action '${action}' for ${api}. Available: ${Object.keys(config.endpoints).join(', ')}` } }];\n}\n\nreturn [{\n  json: {\n    method: endpoint.method,\n    url: config.base_url + endpoint.path,\n    query: endpoint.query || {},\n    body: endpoint.body || {},\n    api: api,\n    action: action\n  }\n}];"
+      },
+      "id": "e5b2c3d4-2002-4f6a-8b0c-2d3e4f5a6b7c",
+      "name": "Build API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e5b2c3d4-2003-4f6a-8b0c-2d3e4f5a6b7c",
+      "name": "Make API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst request = $('Build API Request').first().json;\n\nif (input.error || input.statusCode >= 400) {\n  return [{\n    json: {\n      error: true,\n      api: request.api,\n      action: request.action,\n      status_code: input.statusCode || 500,\n      message: input.message || input.error || 'API call failed',\n      raw_error: input\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    api: request.api,\n    action: request.action,\n    data: input.data || input.body || input,\n    metadata: {\n      timestamp: new Date().toISOString(),\n      execution_id: $execution.id\n    }\n  }\n}];"
+      },
+      "id": "e5b2c3d4-2004-4f6a-8b0c-2d3e4f5a6b7c",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Request": {
+      "main": [
+        [
+          {
+            "node": "Make API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make API Call": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

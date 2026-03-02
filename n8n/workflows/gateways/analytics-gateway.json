@@ -1,0 +1,94 @@
+{
+  "name": "Gateway: Analytics",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d6c3d4e5-3001-4a7b-9c0d-3e4f5a6b7c8d",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { api, action, params } = $input.first().json;\n\nconst apiConfigs = {\n  ga4: {\n    base_url: 'https://analyticsdata.googleapis.com/v1beta',\n    endpoints: {\n      reports: { method: 'POST', path: `/properties/${params.property_id || '{property_id}'}:runReport`, body: { dateRanges: [{ startDate: params.start_date || '7daysAgo', endDate: params.end_date || 'today' }], metrics: (params.metrics || 'sessions,totalUsers,screenPageViews').split(',').map(m => ({ name: m.trim() })), dimensions: (params.dimensions || 'date').split(',').map(d => ({ name: d.trim() })), limit: params.limit || 1000 } },\n      realtime: { method: 'POST', path: `/properties/${params.property_id || '{property_id}'}:runRealtimeReport`, body: { metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }], dimensions: [{ name: 'unifiedScreenName' }], limit: params.limit || 100 } },\n      performance: { method: 'POST', path: `/properties/${params.property_id || '{property_id}'}:runReport`, body: { dateRanges: [{ startDate: params.start_date || '30daysAgo', endDate: params.end_date || 'today' }], metrics: [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'bounceRate' }, { name: 'averageSessionDuration' }, { name: 'conversions' }], dimensions: [{ name: 'sessionSource' }, { name: 'sessionMedium' }], limit: params.limit || 100 } }\n    }\n  },\n  search_console: {\n    base_url: 'https://searchconsole.googleapis.com/v1',\n    endpoints: {\n      reports: { method: 'POST', path: `/sites/${encodeURIComponent(params.site_url || '{site_url}')}/searchAnalytics/query`, body: { startDate: params.start_date || new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], endDate: params.end_date || new Date().toISOString().split('T')[0], dimensions: (params.dimensions || 'query,page').split(',').map(d => d.trim()), rowLimit: params.limit || 1000 } },\n      performance: { method: 'POST', path: `/sites/${encodeURIComponent(params.site_url || '{site_url}')}/searchAnalytics/query`, body: { startDate: params.start_date || new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], endDate: params.end_date || new Date().toISOString().split('T')[0], dimensions: ['query', 'page', 'country', 'device'], rowLimit: params.limit || 1000, type: params.search_type || 'web' } },\n      sitemaps: { method: 'GET', path: `/sites/${encodeURIComponent(params.site_url || '{site_url}')}/sitemaps`, query: {} }\n    }\n  }\n};\n\nconst config = apiConfigs[api];\nif (!config) {\n  return [{ json: { error: true, message: `Unknown analytics API: ${api}. Available: ${Object.keys(apiConfigs).join(', ')}` } }];\n}\n\nconst endpoint = config.endpoints[action];\nif (!endpoint) {\n  return [{ json: { error: true, message: `Unknown action '${action}' for ${api}. Available: ${Object.keys(config.endpoints).join(', ')}` } }];\n}\n\nreturn [{\n  json: {\n    method: endpoint.method,\n    url: config.base_url + endpoint.path,\n    query: endpoint.query || {},\n    body: endpoint.body || {},\n    api: api,\n    action: action\n  }\n}];"
+      },
+      "id": "d6c3d4e5-3002-4a7b-9c0d-3e4f5a6b7c8d",
+      "name": "Build API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.url }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d6c3d4e5-3003-4a7b-9c0d-3e4f5a6b7c8d",
+      "name": "Make API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst request = $('Build API Request').first().json;\n\nif (input.error || input.statusCode >= 400) {\n  return [{\n    json: {\n      error: true,\n      api: request.api,\n      action: request.action,\n      status_code: input.statusCode || 500,\n      message: input.message || input.error || 'API call failed',\n      raw_error: input\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    api: request.api,\n    action: request.action,\n    data: input.data || input.body || input,\n    metadata: {\n      timestamp: new Date().toISOString(),\n      execution_id: $execution.id\n    }\n  }\n}];"
+      },
+      "id": "d6c3d4e5-3004-4a7b-9c0d-3e4f5a6b7c8d",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Request": {
+      "main": [
+        [
+          {
+            "node": "Make API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make API Call": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-02",
+  "default": {
+    "requests_per_minute": 100,
+    "daily_quota": 100000,
+    "burst_allowance": 10,
+    "retry_after_seconds": 60,
+    "backoff_strategy": "exponential",
+    "backoff_base_ms": 1000,
+    "backoff_max_ms": 32000
+  },
+  "apis": {
+    "google_ads": {
+      "requests_per_minute": 60,
+      "daily_quota": 15000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "meta_ads": {
+      "requests_per_minute": 200,
+      "daily_quota": 50000,
+      "burst_allowance": 20,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "linkedin_ads": {
+      "requests_per_minute": 80,
+      "daily_quota": 100000,
+      "burst_allowance": 8,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "tiktok_ads": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "twitter_ads": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "hubspot": {
+      "requests_per_second": 10,
+      "daily_quota": 500000,
+      "burst_allowance": 15,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
+    "salesforce": {
+      "requests_per_day": 15000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 120,
+      "throttle_strategy": "fixed_window"
+    },
+    "pipedrive": {
+      "requests_per_second": 10,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
+    "ga4": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "search_console": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "mixpanel": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "hotjar": {
+      "requests_per_minute": 30,
+      "daily_quota": 10000,
+      "burst_allowance": 3,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "gmail": {
+      "requests_per_minute": 250,
+      "daily_quota": 1000000,
+      "burst_allowance": 25,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "sliding_window"
+    },
+    "calendar": {
+      "requests_per_minute": 100,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "drive": {
+      "requests_per_minute": 100,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "sheets": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "slack": {
+      "requests_per_minute": 60,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "token_bucket"
+    },
+    "microsoft_teams": {
+      "requests_per_minute": 120,
+      "daily_quota": 100000,
+      "burst_allowance": 12,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "sliding_window"
+    },
+    "sendgrid": {
+      "requests_per_second": 10,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
+    "twilio": {
+      "requests_per_second": 100,
+      "daily_quota": 500000,
+      "burst_allowance": 50,
+      "retry_after_seconds": 5,
+      "throttle_strategy": "token_bucket"
+    },
+    "asana": {
+      "requests_per_minute": 150,
+      "daily_quota": 100000,
+      "burst_allowance": 15,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "jira": {
+      "requests_per_minute": 60,
+      "daily_quota": 50000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "notion": {
+      "requests_per_second": 3,
+      "daily_quota": 50000,
+      "burst_allowance": 3,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
+    "trello": {
+      "requests_per_second": 10,
+      "daily_quota": 100000,
+      "burst_allowance": 10,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
+    "shopify": {
+      "requests_per_second": 2,
+      "daily_quota": 50000,
+      "burst_allowance": 2,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "leaky_bucket"
+    },
+    "stripe": {
+      "requests_per_second": 100,
+      "daily_quota": 500000,
+      "burst_allowance": 50,
+      "retry_after_seconds": 5,
+      "throttle_strategy": "token_bucket"
+    },
+    "openai": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "anthropic": {
+      "requests_per_minute": 60,
+      "daily_quota": 10000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 60,
+      "throttle_strategy": "sliding_window"
+    },
+    "airtable": {
+      "requests_per_second": 5,
+      "daily_quota": 100000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 30,
+      "throttle_strategy": "token_bucket"
+    },
+    "supabase": {
+      "requests_per_second": 100,
+      "daily_quota": 500000,
+      "burst_allowance": 50,
+      "retry_after_seconds": 5,
+      "throttle_strategy": "token_bucket"
+    }
+  },
+  "global": {
+    "max_concurrent_requests": 50,
+    "queue_max_size": 1000,
+    "queue_timeout_seconds": 30,
+    "circuit_breaker": {
+      "failure_threshold": 5,
+      "recovery_timeout_seconds": 60,
+      "half_open_max_requests": 3
+    },
+    "monitoring": {
+      "track_usage": true,
+      "alert_threshold_percent": 80,
+      "alert_channels": ["slack", "email"],
+      "usage_reset_time_utc": "00:00"
+    }
+  },
+  "throttle_strategies": {
+    "sliding_window": {
+      "description": "Tracks requests in a rolling time window for smooth rate limiting",
+      "window_size_seconds": 60
+    },
+    "token_bucket": {
+      "description": "Allows bursts up to bucket capacity, refills at steady rate",
+      "refill_interval_ms": 1000
+    },
+    "fixed_window": {
+      "description": "Resets counter at fixed intervals, simplest strategy",
+      "window_size_seconds": 86400
+    },
+    "leaky_bucket": {
+      "description": "Processes requests at a fixed rate, queues excess",
+      "drain_interval_ms": 500
+    }
+  }
+}
