@@ -181,7 +181,22 @@ tag_to_dir() {
     Monitoring)     echo "monitoring" ;;
     Testing)        echo "testing" ;;
     SEO-Pipeline)   echo "seo-pipeline" ;;
-    *)              echo "uncategorized" ;;
+    *)              echo "" ;;
+  esac
+}
+
+# Fallback: infer directory from workflow name when no tag is set
+name_to_dir() {
+  case "$1" in
+    "Gateway: "*)                       echo "gateways" ;;
+    *"API Gateway"*|*"Discovery"*)      echo "gateways" ;;
+    "Infrastructure: "*)                echo "infrastructure" ;;
+    "Error Handler"|"Health Check")     echo "infrastructure" ;;
+    "Monitor: "*)                       echo "monitoring" ;;
+    "Testing: "*)                       echo "testing" ;;
+    *"Credential Blitz"*|*"Test"*)      echo "testing" ;;
+    "SEO Pipeline: "*)                  echo "seo-pipeline" ;;
+    *)                                  echo "uncategorized" ;;
   esac
 }
 
@@ -198,9 +213,12 @@ while read -r wf; do
     continue
   }
 
-  # Determine directory from first tag
+  # Determine directory from tag first, fall back to name-based mapping
   first_tag=$(echo "$wf" | jq -r '(.tags // [])[0].name // empty')
   dir_name=$(tag_to_dir "$first_tag")
+  if [[ -z "$dir_name" ]]; then
+    dir_name=$(name_to_dir "$local_name")
+  fi
 
   # Create safe filename from workflow name
   safe_name=$(echo "$local_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
