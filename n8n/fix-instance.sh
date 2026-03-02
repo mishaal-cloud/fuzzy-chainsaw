@@ -248,13 +248,14 @@ while read -r wf; do
     continue
   fi
 
-  # GET full workflow (required for PUT — must include nodes)
+  # GET full workflow, then strip to only PUT-accepted fields
+  # n8n PUT /workflows/{id} rejects extra properties like createdAt, updatedAt, versionId, etc.
   full_wf=$(api_get "/workflows/$wf_id") || {
     echo "    [WARN] Failed to fetch full workflow, skipping"
     continue
   }
 
-  updated_wf="$full_wf"
+  updated_wf=$(echo "$full_wf" | jq '{name, nodes, connections, settings, staticData, active, tags}')
 
   # Apply tag
   if $needs_tag; then

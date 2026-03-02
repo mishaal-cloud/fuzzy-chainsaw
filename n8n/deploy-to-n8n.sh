@@ -338,15 +338,14 @@ deploy_workflows() {
         tag_id=$(echo "$all_tags" | jq -r --arg t "$tag_name" '.[] | select(.name == $t) | .id')
 
         if [[ -n "$tag_id" ]]; then
-          # GET the full workflow (includes nodes, connections, etc.)
+          # GET the full workflow, strip to PUT-accepted fields, add tags
           local full_workflow
           full_workflow=$(api_get "/workflows/$new_id")
 
           if [[ -n "$full_workflow" ]]; then
-            # Merge tags into the full workflow body
             local updated_body
             updated_body=$(echo "$full_workflow" | jq --arg tid "$tag_id" --arg tname "$tag_name" \
-              '.tags = [{"id": $tid, "name": $tname}]')
+              '{name, nodes, connections, settings, staticData, active} + {tags: [{"id": $tid, "name": $tname}]}')
 
             local tag_response
             tag_response=$(api_put_verbose "/workflows/$new_id" "$updated_body")
@@ -364,9 +363,9 @@ deploy_workflows() {
         fi
       fi
 
-      # Activate the workflow
+      # Activate the workflow — strip to PUT-accepted fields
       local activate_body
-      activate_body=$(api_get "/workflows/$new_id" | jq '.active = true')
+      activate_body=$(api_get "/workflows/$new_id" | jq '{name, nodes, connections, settings, staticData, tags, active: true}')
       local activate_response
       activate_response=$(api_put_verbose "/workflows/$new_id" "$activate_body")
       local act_status="${activate_response%%|*}"
