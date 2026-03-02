@@ -192,6 +192,13 @@
       "retry_after_seconds": 5,
       "throttle_strategy": "token_bucket"
     },
+    "semrush": {
+      "requests_per_second": 10,
+      "daily_quota": 30000,
+      "burst_allowance": 5,
+      "retry_after_seconds": 10,
+      "throttle_strategy": "token_bucket"
+    },
     "openai": {
       "requests_per_minute": 60,
       "daily_quota": 10000,

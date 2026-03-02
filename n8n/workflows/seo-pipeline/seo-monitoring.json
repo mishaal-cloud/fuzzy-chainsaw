@@ -1,0 +1,322 @@
+{
+  "name": "SEO Pipeline: Monitoring & Reporting",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "seo-mon-0001-schedule",
+      "name": "Daily 7 AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "path": "seo-monitoring",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "seo-mon-0001b-webhook",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 550],
+      "webhookId": "seo-monitoring-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Load config from n8n variables or use defaults\nconst config = {\n  domain: 'kahunaworkforce.com',\n  semrush_api_key: $input.first().json.body?.semrush_api_key || '',\n  database: 'us',\n  ga4_property_id: $input.first().json.body?.ga4_property_id || '',\n  tracked_keywords: $input.first().json.body?.tracked_keywords || [],\n  slack_webhook_url: '',\n  day_of_week: new Date().getDay() // 0=Sunday\n};\n\n// Try loading from n8n variables\ntry {\n  config.slack_webhook_url = $vars.SLACK_WEBHOOK_URL || '';\n  config.semrush_api_key = config.semrush_api_key || $vars.SEMRUSH_API_KEY || '';\n} catch(e) {}\n\nreturn [{ json: { ...config, run_site_audit: config.day_of_week === 1, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "seo-mon-0002-config",
+      "name": "Load Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_ranks&key={{ $json.semrush_api_key }}&domain={{ $json.domain }}&database={{ $json.database }}&export_columns=Dn,Rk,Or,Ot,Oc,Ad,At,Ac",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-mon-0003-domain-overview",
+      "name": "SEMrush: Domain Overview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_rank_history&key={{ $json.semrush_api_key }}&domain={{ $json.domain }}&database={{ $json.database }}&display_limit=30&export_columns=Dt,Rk,Or,Ot,Oc",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-mon-0004-rank-history",
+      "name": "SEMrush: Rank History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_organic&key={{ $json.semrush_api_key }}&display_limit=50&domain={{ $json.domain }}&database={{ $json.database }}&export_columns=Ph,Po,Pp,Nq,Kd,Tr,Ur&display_sort=tr_desc",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-mon-0005-positions",
+      "name": "SEMrush: Current Positions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile daily position tracking report\nconst config = $('Load Config').first().json;\nconst overviewRaw = $('SEMrush: Domain Overview').first().json;\nconst historyRaw = $('SEMrush: Rank History').first().json;\nconst positionsRaw = $('SEMrush: Current Positions').first().json;\n\n// Parse domain overview\nlet overview = {};\ntry {\n  const text = typeof overviewRaw === 'string' ? overviewRaw : (overviewRaw.data || '');\n  const lines = text.split('\\n').filter(l => l.trim());\n  if (lines.length > 1) {\n    const vals = lines[1].split(';');\n    overview = {\n      domain: vals[0],\n      rank: parseInt(vals[1] || 0),\n      organic_keywords: parseInt(vals[2] || 0),\n      organic_traffic: parseInt(vals[3] || 0),\n      organic_cost: parseFloat(vals[4] || 0),\n      paid_keywords: parseInt(vals[5] || 0),\n      paid_traffic: parseInt(vals[6] || 0),\n      paid_cost: parseFloat(vals[7] || 0)\n    };\n  }\n} catch(e) { overview = { error: e.message }; }\n\n// Parse position changes\nlet positions = [];\ntry {\n  const text = typeof positionsRaw === 'string' ? positionsRaw : (positionsRaw.data || '');\n  const lines = text.split('\\n').filter(l => l.trim());\n  if (lines.length > 1) {\n    positions = lines.slice(1).map(line => {\n      const vals = line.split(';');\n      return {\n        keyword: vals[0],\n        position: parseInt(vals[1] || 0),\n        previous_position: parseInt(vals[2] || 0),\n        search_volume: parseInt(vals[3] || 0),\n        difficulty: parseInt(vals[4] || 0),\n        traffic: parseFloat(vals[5] || 0),\n        url: vals[6] || ''\n      };\n    });\n  }\n} catch(e) { positions = [{ error: e.message }]; }\n\n// Identify movers\nconst improved = positions.filter(p => p.previous_position > 0 && p.position < p.previous_position);\nconst declined = positions.filter(p => p.previous_position > 0 && p.position > p.previous_position);\nconst newRankings = positions.filter(p => p.previous_position === 0 && p.position > 0);\nconst lostRankings = positions.filter(p => p.position === 0 && p.previous_position > 0);\n\nconst report = {\n  pipeline_step: 'daily_monitoring',\n  domain: config.domain,\n  generated_at: config.timestamp,\n  domain_overview: overview,\n  position_tracking: {\n    total_tracked: positions.length,\n    improved: improved.length,\n    declined: declined.length,\n    new_rankings: newRankings.length,\n    lost_rankings: lostRankings.length,\n    top_improvers: improved.sort((a,b) => (b.previous_position - b.position) - (a.previous_position - a.position)).slice(0, 10),\n    top_decliners: declined.sort((a,b) => (b.position - b.previous_position) - (a.position - a.previous_position)).slice(0, 10),\n    top_10_keywords: positions.filter(p => p.position <= 10).length,\n    top_20_keywords: positions.filter(p => p.position <= 20).length\n  },\n  run_site_audit: config.run_site_audit\n};\n\nreturn [{ json: report }];"
+      },
+      "id": "seo-mon-0006-compile",
+      "name": "Compile Daily Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "site-audit-check",
+              "leftValue": "={{ $json.run_site_audit }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "seo-mon-0007-check-audit",
+      "name": "Monday? Run Site Audit",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_audit&key={{ $('Load Config').first().json.semrush_api_key }}&domain={{ $('Load Config').first().json.domain }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "seo-mon-0008-site-audit",
+      "name": "SEMrush: Site Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1460, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Slack notification with monitoring results\nconst report = $('Compile Daily Report').first().json;\nconst config = $('Load Config').first().json;\n\nlet auditSection = '';\ntry {\n  const auditData = $('SEMrush: Site Audit').first().json;\n  auditSection = `\\n\\n:mag: *Weekly Site Audit*\\n${typeof auditData === 'string' ? auditData.substring(0, 500) : JSON.stringify(auditData).substring(0, 500)}`;\n} catch(e) {\n  // No audit this run\n}\n\nconst pt = report.position_tracking;\nconst ov = report.domain_overview;\n\nconst slackMessage = {\n  text: `:chart_with_upwards_trend: *SEO Daily Report: ${report.domain}*\\n_${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}_`,\n  blocks: [\n    {\n      type: 'header',\n      text: { type: 'plain_text', text: `SEO Report: ${report.domain}` }\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `:globe_with_meridians: *Domain Overview*\\n• Organic Keywords: ${ov.organic_keywords?.toLocaleString() || 'N/A'}\\n• Organic Traffic: ${ov.organic_traffic?.toLocaleString() || 'N/A'}\\n• Domain Rank: ${ov.rank || 'N/A'}`\n      }\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `:bar_chart: *Position Tracking*\\n• Top 10 Keywords: ${pt.top_10_keywords}\\n• Top 20 Keywords: ${pt.top_20_keywords}\\n• :arrow_up: Improved: ${pt.improved} | :arrow_down: Declined: ${pt.declined}\\n• :new: New: ${pt.new_rankings} | :x: Lost: ${pt.lost_rankings}`\n      }\n    }\n  ]\n};\n\nif (pt.top_improvers.length > 0) {\n  const improverText = pt.top_improvers.slice(0, 5).map(k => `• \\\"${k.keyword}\\\" ${k.previous_position} → ${k.position} (+${k.previous_position - k.position})`).join('\\n');\n  slackMessage.blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `:star: *Top Improvers*\\n${improverText}` }\n  });\n}\n\nif (pt.top_decliners.length > 0) {\n  const declinerText = pt.top_decliners.slice(0, 5).map(k => `• \\\"${k.keyword}\\\" ${k.previous_position} → ${k.position} (-${k.position - k.previous_position})`).join('\\n');\n  slackMessage.blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `:warning: *Top Decliners*\\n${declinerText}` }\n  });\n}\n\nreturn [{ json: { report, slack_message: slackMessage } }];"
+      },
+      "id": "seo-mon-0009-slack-msg",
+      "name": "Build Slack Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1460, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.slack_message) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "seo-mon-0010-slack-send",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1720, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Build Slack Notification').first().json.report }}",
+        "options": {}
+      },
+      "id": "seo-mon-0011-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1720, 700]
+    }
+  ],
+  "connections": {
+    "Daily 7 AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Config": {
+      "main": [
+        [
+          {
+            "node": "SEMrush: Domain Overview",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEMrush: Rank History",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEMrush: Current Positions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Domain Overview": {
+      "main": [
+        [
+          {
+            "node": "Compile Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Rank History": {
+      "main": [
+        [
+          {
+            "node": "Compile Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Current Positions": {
+      "main": [
+        [
+          {
+            "node": "Compile Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Daily Report": {
+      "main": [
+        [
+          {
+            "node": "Monday? Run Site Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monday? Run Site Audit": {
+      "main": [
+        [
+          {
+            "node": "SEMrush: Site Audit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Site Audit": {
+      "main": [
+        [
+          {
+            "node": "Build Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack Notification": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

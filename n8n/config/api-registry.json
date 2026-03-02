@@ -186,6 +186,34 @@
         "documentation": "https://developer.hotjar.com/",
         "health_check_endpoint": "/sites",
         "timeout_ms": 15000
+      },
+      "semrush": {
+        "name": "SEMrush",
+        "base_url": "https://api.semrush.com",
+        "auth_type": "api_key",
+        "credential_key": "PROD_SEMRUSH_KEY",
+        "rate_limits": {
+          "requests_per_second": 10,
+          "daily_quota": 30000
+        },
+        "required_params": [],
+        "actions": [
+          "domain_overview",
+          "domain_organic",
+          "domain_organic_keywords",
+          "keyword_overview",
+          "keyword_difficulty",
+          "keyword_volume",
+          "keyword_gap",
+          "backlinks_overview",
+          "site_audit",
+          "position_tracking",
+          "on_page_seo_checker",
+          "competitors_organic"
+        ],
+        "documentation": "https://developer.semrush.com/api/",
+        "health_check_endpoint": "/?type=domain_ranks&key={api_key}&domain=google.com&database=us",
+        "timeout_ms": 60000
       }
     },
     "google_suite": {
@@ -469,7 +497,7 @@
     }
   },
   "metadata": {
-    "total_apis": 30,
+    "total_apis": 31,
     "total_categories": 8,
     "supported_auth_types": ["oauth2", "api_key", "app_token", "webhook"],
     "default_timeout_ms": 30000,

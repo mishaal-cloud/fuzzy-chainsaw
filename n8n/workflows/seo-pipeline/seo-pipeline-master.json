@@ -1,0 +1,292 @@
+{
+  "name": "SEO Pipeline: Master Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "seo-pipeline",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "seo-master-0001-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "seo-pipeline-master-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Master orchestrator: determines which pipeline step to run\nconst input = $input.first().json;\nconst body = input.body || input;\n\nconst validSteps = [\n  'full_pipeline',\n  'data_collection',\n  'content_optimization',\n  'monitoring',\n  'keyword_gap',\n  'position_check',\n  'site_audit'\n];\n\nconst config = {\n  step: body.step || 'full_pipeline',\n  domain: body.domain || 'kahunaworkforce.com',\n  ga4_property_id: body.ga4_property_id || '',\n  gsc_site_url: body.gsc_site_url || 'https://kahunaworkforce.com/',\n  semrush_api_key: body.semrush_api_key || '',\n  anthropic_api_key: body.anthropic_api_key || '',\n  database: body.database || 'us',\n  page_url: body.page_url || '',\n  target_keywords: body.target_keywords || [],\n  competitors: body.competitors || [],\n  top_n_pages: body.top_n_pages || 20,\n  date_range_days: body.date_range_days || 90\n};\n\nif (!validSteps.includes(config.step)) {\n  return [{ json: { error: true, message: `Invalid step '${config.step}'. Valid: ${validSteps.join(', ')}` } }];\n}\n\nreturn [{ json: config }];"
+      },
+      "id": "seo-master-0002-router",
+      "name": "Route Pipeline Step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "step-data",
+              "leftValue": "={{ $json.step }}",
+              "rightValue": "data_collection",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "seo-master-0003-switch-dc",
+      "name": "Is Data Collection?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "step-content",
+              "leftValue": "={{ $json.step }}",
+              "rightValue": "content_optimization",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "seo-master-0004-switch-co",
+      "name": "Is Content Optimization?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "step-monitor",
+              "leftValue": "={{ $json.step }}",
+              "rightValue": "monitoring",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "seo-master-0005-switch-mon",
+      "name": "Is Monitoring?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// For ad-hoc quick actions: keyword gap, position check, site audit\nconst config = $('Route Pipeline Step').first().json;\nconst step = config.step;\n\nconst apiCalls = {\n  keyword_gap: {\n    url: `https://api.semrush.com/?type=domain_domains&key=${config.semrush_api_key}&display_limit=50&domains=${config.domain}|${(config.competitors || []).join('|')}&database=${config.database}&export_columns=Ph,P0,P1,P2,P3,P4,Nr,Td,In`,\n    description: 'Keyword gap analysis against competitors'\n  },\n  position_check: {\n    url: `https://api.semrush.com/?type=domain_organic&key=${config.semrush_api_key}&display_limit=50&domain=${config.domain}&database=${config.database}&export_columns=Ph,Po,Pp,Nq,Kd,Tr,Ur&display_sort=tr_desc`,\n    description: 'Current SERP positions for top keywords'\n  },\n  site_audit: {\n    url: `https://api.semrush.com/?type=domain_ranks&key=${config.semrush_api_key}&domain=${config.domain}&database=${config.database}&export_columns=Dn,Rk,Or,Ot,Oc,Ad,At,Ac`,\n    description: 'Domain health and ranking overview'\n  },\n  full_pipeline: {\n    url: '',\n    description: 'Full pipeline runs data_collection → content_optimization → monitoring sequentially'\n  }\n};\n\nconst call = apiCalls[step];\nif (!call) {\n  return [{ json: { error: true, message: `Step '${step}' should be routed to a sub-workflow` } }];\n}\n\nreturn [{ json: { ...config, api_url: call.url, step_description: call.description } }];"
+      },
+      "id": "seo-master-0006-adhoc",
+      "name": "Ad-hoc API Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 800]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.api_url }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-master-0007-adhoc-call",
+      "name": "Execute Ad-hoc Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 800],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format ad-hoc response\nconst config = $('Ad-hoc API Call').first().json;\nconst raw = $('Execute Ad-hoc Call').first().json;\n\nlet parsed = raw;\ntry {\n  if (typeof raw === 'string' || raw.data) {\n    const csvText = typeof raw === 'string' ? raw : raw.data;\n    const lines = csvText.split('\\n').filter(l => l.trim());\n    if (lines.length > 1) {\n      const headers = lines[0].split(';');\n      parsed = lines.slice(1).map(line => {\n        const vals = line.split(';');\n        const obj = {};\n        headers.forEach((h, i) => { obj[h.trim()] = vals[i]?.trim() || ''; });\n        return obj;\n      });\n    }\n  }\n} catch(e) { parsed = raw; }\n\nreturn [{\n  json: {\n    step: config.step,\n    step_description: config.step_description,\n    domain: config.domain,\n    generated_at: new Date().toISOString(),\n    results: parsed\n  }\n}];"
+      },
+      "id": "seo-master-0008-format",
+      "name": "Format Ad-hoc Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 800]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "seo-master-0009-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1420, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route Pipeline Step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Pipeline Step": {
+      "main": [
+        [
+          {
+            "node": "Is Data Collection?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Content Optimization?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Monitoring?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ad-hoc API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Data Collection?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Content Optimization?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Monitoring?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ad-hoc API Call": {
+      "main": [
+        [
+          {
+            "node": "Execute Ad-hoc Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Ad-hoc Call": {
+      "main": [
+        [
+          {
+            "node": "Format Ad-hoc Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Ad-hoc Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "name": "SEO Pipeline: Data Collection",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "seo-data-collection",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "seo-dc-0001-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "seo-data-collection-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Validate input and set defaults for kahunaworkforce.com\nconst input = $input.first().json;\nconst body = input.body || input;\n\nconst config = {\n  domain: body.domain || 'kahunaworkforce.com',\n  ga4_property_id: body.ga4_property_id || '',\n  gsc_site_url: body.gsc_site_url || 'https://kahunaworkforce.com/',\n  semrush_api_key: body.semrush_api_key || '',\n  database: body.database || 'us',\n  date_range_days: body.date_range_days || 90,\n  top_n_pages: body.top_n_pages || 20,\n  competitors: body.competitors || [],\n  limit: body.limit || 100\n};\n\nif (!config.ga4_property_id) {\n  return [{ json: { error: true, message: 'ga4_property_id is required. Find it in GA4 Admin > Property Settings.' } }];\n}\n\nif (!config.semrush_api_key) {\n  return [{ json: { error: true, message: 'semrush_api_key is required.' } }];\n}\n\nconst startDate = new Date(Date.now() - config.date_range_days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];\nconst endDate = new Date().toISOString().split('T')[0];\n\nreturn [{ json: { ...config, start_date: startDate, end_date: endDate } }];"
+      },
+      "id": "seo-dc-0002-validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $json.ga4_property_id }}:runReport",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"dateRanges\": [{\"startDate\": \"{{ $json.start_date }}\", \"endDate\": \"{{ $json.end_date }}\"}],\n  \"metrics\": [\n    {\"name\": \"screenPageViews\"},\n    {\"name\": \"sessions\"},\n    {\"name\": \"conversions\"},\n    {\"name\": \"totalUsers\"},\n    {\"name\": \"bounceRate\"},\n    {\"name\": \"averageSessionDuration\"},\n    {\"name\": \"engagementRate\"}\n  ],\n  \"dimensions\": [\n    {\"name\": \"pagePath\"},\n    {\"name\": \"pageTitle\"}\n  ],\n  \"orderBys\": [\n    {\"metric\": {\"metricName\": \"screenPageViews\"}, \"desc\": true}\n  ],\n  \"limit\": {{ $json.top_n_pages * 3 }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "seo-dc-0003-ga4",
+      "name": "GA4: Top Pages by Traffic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/v1/sites/{{ encodeURIComponent($json.gsc_site_url) }}/searchAnalytics/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $json.start_date }}\",\n  \"endDate\": \"{{ $json.end_date }}\",\n  \"dimensions\": [\"query\", \"page\"],\n  \"type\": \"web\",\n  \"rowLimit\": 1000,\n  \"dimensionFilterGroups\": [{\n    \"filters\": [{\n      \"dimension\": \"page\",\n      \"operator\": \"contains\",\n      \"expression\": \"{{ $json.domain }}\"\n    }]\n  }]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "seo-dc-0004-gsc",
+      "name": "GSC: Keywords & Pages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_organic&key={{ $json.semrush_api_key }}&display_limit={{ $json.limit }}&domain={{ $json.domain }}&database={{ $json.database }}&export_columns=Ph,Po,Nq,Cp,Co,Kd,Ur,Tr,Tc,In",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-dc-0005-semrush-organic",
+      "name": "SEMrush: Organic Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_organic_organic&key={{ $('Validate Input').first().json.semrush_api_key }}&display_limit=10&domain={{ $('Validate Input').first().json.domain }}&database={{ $('Validate Input').first().json.database }}&export_columns=Dn,Cr,Np,Or,Ot,Oc,Ad",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-dc-0006-semrush-competitors",
+      "name": "SEMrush: Find Competitors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 800],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all data sources and produce the unified SEO dataset\nconst config = $('Validate Input').first().json;\nconst ga4Raw = $('GA4: Top Pages by Traffic').first().json;\nconst gscRaw = $('GSC: Keywords & Pages').first().json;\nconst semrushOrganic = $('SEMrush: Organic Keywords').first().json;\nconst semrushCompetitors = $('SEMrush: Find Competitors').first().json;\n\n// Parse GA4 results into page objects\nlet ga4Pages = [];\ntry {\n  const rows = ga4Raw.rows || [];\n  ga4Pages = rows.map(row => ({\n    page_path: row.dimensionValues[0].value,\n    page_title: row.dimensionValues[1].value,\n    pageviews: parseInt(row.metricValues[0].value || 0),\n    sessions: parseInt(row.metricValues[1].value || 0),\n    conversions: parseInt(row.metricValues[2].value || 0),\n    users: parseInt(row.metricValues[3].value || 0),\n    bounce_rate: parseFloat(row.metricValues[4].value || 0),\n    avg_session_duration: parseFloat(row.metricValues[5].value || 0),\n    engagement_rate: parseFloat(row.metricValues[6].value || 0)\n  }));\n  // Calculate traffic x conversion score and sort\n  ga4Pages = ga4Pages.map(p => ({\n    ...p,\n    traffic_x_conversion: p.sessions * (p.conversions / Math.max(p.sessions, 1)),\n    conversion_rate: p.sessions > 0 ? (p.conversions / p.sessions * 100).toFixed(2) : '0.00'\n  }));\n  ga4Pages.sort((a, b) => b.traffic_x_conversion - a.traffic_x_conversion);\n  ga4Pages = ga4Pages.slice(0, config.top_n_pages);\n} catch (e) {\n  ga4Pages = [{ error: 'Failed to parse GA4 data', details: e.message }];\n}\n\n// Parse GSC keywords\nlet gscKeywords = [];\ntry {\n  const rows = gscRaw.rows || [];\n  gscKeywords = rows.map(row => ({\n    keyword: row.keys[0],\n    page: row.keys[1],\n    clicks: row.clicks,\n    impressions: row.impressions,\n    ctr: (row.ctr * 100).toFixed(2),\n    position: row.position.toFixed(1)\n  }));\n} catch (e) {\n  gscKeywords = [{ error: 'Failed to parse GSC data', details: e.message }];\n}\n\n// Parse SEMrush organic keywords (CSV format)\nlet semrushKeywords = [];\ntry {\n  if (typeof semrushOrganic === 'string' || semrushOrganic.data) {\n    const csvText = typeof semrushOrganic === 'string' ? semrushOrganic : semrushOrganic.data;\n    const lines = csvText.split('\\n').filter(l => l.trim());\n    if (lines.length > 1) {\n      const headers = lines[0].split(';');\n      semrushKeywords = lines.slice(1).map(line => {\n        const vals = line.split(';');\n        return {\n          keyword: vals[0],\n          position: parseInt(vals[1]),\n          search_volume: parseInt(vals[2]),\n          cpc: parseFloat(vals[3]),\n          competition: parseFloat(vals[4]),\n          keyword_difficulty: parseInt(vals[5]),\n          url: vals[6],\n          traffic: parseFloat(vals[7]),\n          traffic_cost: parseFloat(vals[8]),\n          search_intent: vals[9] || 'unknown'\n        };\n      });\n    }\n  }\n} catch (e) {\n  semrushKeywords = [{ error: 'Failed to parse SEMrush organic data', details: e.message }];\n}\n\n// Parse SEMrush competitors\nlet competitors = [];\ntry {\n  if (typeof semrushCompetitors === 'string' || semrushCompetitors.data) {\n    const csvText = typeof semrushCompetitors === 'string' ? semrushCompetitors : semrushCompetitors.data;\n    const lines = csvText.split('\\n').filter(l => l.trim());\n    if (lines.length > 1) {\n      competitors = lines.slice(1).map(line => {\n        const vals = line.split(';');\n        return {\n          domain: vals[0],\n          common_keywords: parseInt(vals[1]),\n          se_keywords: parseInt(vals[2]),\n          organic_traffic: parseInt(vals[3]),\n          organic_cost: parseFloat(vals[4]),\n          paid_keywords: parseInt(vals[5]),\n          paid_traffic: parseInt(vals[6])\n        };\n      });\n    }\n  }\n} catch (e) {\n  competitors = [{ error: 'Failed to parse competitors data', details: e.message }];\n}\n\n// Auto-classify keywords by intent\nconst classifyIntent = (kw) => {\n  const keyword = (kw.keyword || '').toLowerCase();\n  const intent = (kw.search_intent || '').toLowerCase();\n  // Use SEMrush intent if available\n  if (intent && intent !== 'unknown') {\n    const intentMap = { '0': 'informational', '1': 'navigational', '2': 'commercial', '3': 'transactional' };\n    return intentMap[intent] || intent;\n  }\n  // Fallback heuristic classification\n  if (/buy|price|cost|cheap|deal|discount|order|purchase|hire|get/.test(keyword)) return 'transactional';\n  if (/best|top|review|compare|vs|alternative/.test(keyword)) return 'commercial';\n  if (/how|what|why|when|guide|tutorial|tips|learn/.test(keyword)) return 'informational';\n  return 'navigational';\n};\n\nconst classifiedKeywords = semrushKeywords.map(kw => ({\n  ...kw,\n  intent_category: classifyIntent(kw)\n}));\n\n// Build the unified output\nreturn [{\n  json: {\n    pipeline_step: 'data_collection',\n    domain: config.domain,\n    generated_at: new Date().toISOString(),\n    summary: {\n      ga4_top_pages_count: ga4Pages.length,\n      gsc_keywords_count: gscKeywords.length,\n      semrush_keywords_count: classifiedKeywords.length,\n      competitors_found: competitors.length,\n      intent_breakdown: {\n        transactional: classifiedKeywords.filter(k => k.intent_category === 'transactional').length,\n        commercial: classifiedKeywords.filter(k => k.intent_category === 'commercial').length,\n        informational: classifiedKeywords.filter(k => k.intent_category === 'informational').length,\n        navigational: classifiedKeywords.filter(k => k.intent_category === 'navigational').length\n      }\n    },\n    ga4_top_pages: ga4Pages,\n    gsc_keywords: gscKeywords,\n    semrush_keywords: classifiedKeywords,\n    competitors: competitors,\n    next_steps: [\n      'Run keyword gap analysis against top competitors',\n      'Cross-reference GA4 top pages with SEMrush keyword data',\n      'Identify pages with high traffic but low conversion for optimization',\n      'Feed data to content optimizer workflow'\n    ]\n  }\n}];"
+      },
+      "id": "seo-dc-0007-merge",
+      "name": "Merge & Classify Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=domain_domains&key={{ $('Validate Input').first().json.semrush_api_key }}&display_limit={{ $('Validate Input').first().json.limit }}&domains={{ $json.domain }}|{{ $json.competitors.slice(0, 4).map(c => c.domain).join('|') }}&database={{ $('Validate Input').first().json.database }}&export_columns=Ph,P0,P1,P2,P3,P4,Nr,Td,In",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-dc-0008-keyword-gap",
+      "name": "SEMrush: Keyword Gap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse keyword gap data and enrich the collection output\nconst collection = $('Merge & Classify Data').first().json;\nconst gapRaw = $('SEMrush: Keyword Gap').first().json;\nconst config = $('Validate Input').first().json;\n\nlet keywordGaps = [];\ntry {\n  if (typeof gapRaw === 'string' || gapRaw.data) {\n    const csvText = typeof gapRaw === 'string' ? gapRaw : gapRaw.data;\n    const lines = csvText.split('\\n').filter(l => l.trim());\n    if (lines.length > 1) {\n      keywordGaps = lines.slice(1).map(line => {\n        const vals = line.split(';');\n        return {\n          keyword: vals[0],\n          your_position: vals[1] === '' ? 'not_ranking' : parseInt(vals[1]),\n          competitor_positions: vals.slice(2, 6).map(v => v === '' ? 'not_ranking' : parseInt(v)),\n          search_volume: parseInt(vals[6] || 0),\n          keyword_difficulty: parseInt(vals[7] || 0),\n          intent: vals[8] || 'unknown'\n        };\n      });\n      // Focus on keywords where we're NOT ranking but competitors ARE\n      keywordGaps = keywordGaps.filter(k => k.your_position === 'not_ranking');\n      keywordGaps.sort((a, b) => b.search_volume - a.search_volume);\n    }\n  }\n} catch (e) {\n  keywordGaps = [{ error: 'Failed to parse keyword gap data', details: e.message }];\n}\n\nreturn [{\n  json: {\n    ...collection,\n    keyword_gap_analysis: {\n      total_gap_keywords: keywordGaps.length,\n      top_opportunities: keywordGaps.slice(0, 50),\n      by_intent: {\n        transactional: keywordGaps.filter(k => /transactional|3/.test(k.intent)).length,\n        commercial: keywordGaps.filter(k => /commercial|2/.test(k.intent)).length,\n        informational: keywordGaps.filter(k => /informational|0/.test(k.intent)).length\n      }\n    }\n  }\n}];"
+      },
+      "id": "seo-dc-0009-gap-enrich",
+      "name": "Enrich with Keyword Gaps",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "seo-dc-0010-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1680, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "GA4: Top Pages by Traffic",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GSC: Keywords & Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEMrush: Organic Keywords",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEMrush: Find Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4: Top Pages by Traffic": {
+      "main": [
+        [
+          {
+            "node": "Merge & Classify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GSC: Keywords & Pages": {
+      "main": [
+        [
+          {
+            "node": "Merge & Classify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Organic Keywords": {
+      "main": [
+        [
+          {
+            "node": "Merge & Classify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Find Competitors": {
+      "main": [
+        [
+          {
+            "node": "Merge & Classify Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & Classify Data": {
+      "main": [
+        [
+          {
+            "node": "SEMrush: Keyword Gap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Keyword Gap": {
+      "main": [
+        [
+          {
+            "node": "Enrich with Keyword Gaps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich with Keyword Gaps": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

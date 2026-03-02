@@ -1,0 +1,162 @@
+{
+  "name": "SEO Pipeline: Content Optimizer",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "seo-content-optimizer",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "seo-co-0001-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 400],
+      "webhookId": "seo-content-optimizer-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input: requires page data + keyword data from data collection step\nconst input = $input.first().json;\nconst body = input.body || input;\n\nconst config = {\n  domain: body.domain || 'kahunaworkforce.com',\n  page_url: body.page_url || '',\n  page_title: body.page_title || '',\n  current_copy: body.current_copy || '',\n  target_keywords: body.target_keywords || [],\n  keyword_intents: body.keyword_intents || {},\n  competitor_urls: body.competitor_urls || [],\n  semrush_api_key: body.semrush_api_key || '',\n  anthropic_api_key: body.anthropic_api_key || '',\n  tone: body.tone || 'professional',\n  word_count_target: body.word_count_target || null\n};\n\nif (!config.page_url) {\n  return [{ json: { error: true, message: 'page_url is required.' } }];\n}\nif (!config.target_keywords.length) {\n  return [{ json: { error: true, message: 'target_keywords array is required (at least 1 keyword).' } }];\n}\nif (!config.anthropic_api_key) {\n  return [{ json: { error: true, message: 'anthropic_api_key is required for Claude copy rewriting.' } }];\n}\n\nreturn [{ json: config }];"
+      },
+      "id": "seo-co-0002-validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $json.anthropic_api_key }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"You are an expert SEO copywriter. Rewrite the following page copy to optimize for the target keywords while matching their search intent.\\n\\n## Page URL\\n{{ $json.page_url }}\\n\\n## Page Title\\n{{ $json.page_title }}\\n\\n## Current Copy\\n{{ $json.current_copy }}\\n\\n## Target Keywords (with intent)\\n{{ $json.target_keywords.map((kw, i) => `- ${kw} (intent: ${$json.keyword_intents[kw] || 'informational'})`).join('\\\\n') }}\\n\\n## Instructions\\n1. Rewrite the copy to naturally incorporate ALL target keywords\\n2. Match the search intent for each keyword:\\n   - Transactional: Include CTAs, pricing signals, action-oriented language\\n   - Commercial: Include comparisons, benefits, social proof\\n   - Informational: Include explanations, how-to steps, educational content\\n   - Navigational: Ensure brand mentions and clear page identity\\n3. Maintain a {{ $json.tone }} tone\\n4. Optimize the title tag (under 60 chars) and meta description (under 155 chars)\\n5. Include H2/H3 subheadings that incorporate keywords\\n6. Keep paragraphs short (2-3 sentences max)\\n{{ $json.word_count_target ? '7. Target approximately ' + $json.word_count_target + ' words' : '' }}\\n\\n## Output Format (JSON)\\n{\\n  \\\"optimized_title_tag\\\": \\\"...\\\",\\n  \\\"optimized_meta_description\\\": \\\"...\\\",\\n  \\\"optimized_h1\\\": \\\"...\\\",\\n  \\\"optimized_copy\\\": \\\"... (full rewritten copy with HTML heading tags)\\\",\\n  \\\"keywords_used\\\": [\\\"list of keywords naturally incorporated\\\"],\\n  \\\"intent_alignment\\\": {\\\"keyword\\\": \\\"how intent was addressed\\\"},\\n  \\\"changes_summary\\\": \\\"brief description of what changed and why\\\"\\n}\\n\\nRespond ONLY with valid JSON, no markdown fencing.\"\n  }]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "seo-co-0003-claude",
+      "name": "Claude: Rewrite Copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.semrush.com/?type=phrase_related&key={{ $('Validate Input').first().json.semrush_api_key }}&phrase={{ encodeURIComponent($('Validate Input').first().json.target_keywords[0]) }}&database={{ 'us' }}&display_limit=20&export_columns=Ph,Nq,Kd,In",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "seo-co-0004-related-kw",
+      "name": "SEMrush: Related Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's rewritten copy and SEMrush related keywords\nconst config = $('Validate Input').first().json;\nconst claudeRaw = $('Claude: Rewrite Copy').first().json;\nconst relatedRaw = $('SEMrush: Related Keywords').first().json;\n\n// Parse Claude response\nlet optimizedCopy = {};\ntry {\n  const content = claudeRaw.content?.[0]?.text || claudeRaw.content || '';\n  optimizedCopy = JSON.parse(content);\n} catch (e) {\n  optimizedCopy = {\n    error: 'Failed to parse Claude response',\n    raw_response: claudeRaw.content?.[0]?.text || 'No response',\n    details: e.message\n  };\n}\n\n// Parse related keywords for additional optimization suggestions\nlet relatedKeywords = [];\ntry {\n  if (typeof relatedRaw === 'string' || relatedRaw.data) {\n    const csvText = typeof relatedRaw === 'string' ? relatedRaw : relatedRaw.data;\n    const lines = csvText.split('\\n').filter(l => l.trim());\n    if (lines.length > 1) {\n      relatedKeywords = lines.slice(1).map(line => {\n        const vals = line.split(';');\n        return {\n          keyword: vals[0],\n          volume: parseInt(vals[1] || 0),\n          difficulty: parseInt(vals[2] || 0),\n          intent: vals[3] || 'unknown'\n        };\n      });\n    }\n  }\n} catch (e) {\n  // Related keywords are supplementary, don't fail\n}\n\nreturn [{\n  json: {\n    pipeline_step: 'content_optimization',\n    domain: config.domain,\n    page_url: config.page_url,\n    generated_at: new Date().toISOString(),\n    optimized_content: optimizedCopy,\n    related_keywords_to_consider: relatedKeywords.slice(0, 10),\n    validation_status: 'pending_semrush_check',\n    next_steps: [\n      'Run SEMrush On-Page SEO Checker to validate optimization',\n      'Review optimized copy for brand voice consistency',\n      'Schedule for staged rollout (2 pages/week)'\n    ]\n  }\n}];"
+      },
+      "id": "seo-co-0005-merge",
+      "name": "Merge Optimized Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "seo-co-0006-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Claude: Rewrite Copy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEMrush: Related Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Rewrite Copy": {
+      "main": [
+        [
+          {
+            "node": "Merge Optimized Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEMrush: Related Keywords": {
+      "main": [
+        [
+          {
+            "node": "Merge Optimized Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Optimized Content": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
