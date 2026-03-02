@@ -310,6 +310,62 @@ n8n/
 
 ---
 
+## Reliability & Self-Healing Infrastructure
+
+The n8n layer includes automated monitoring so you never have to guess whether things work.
+
+### Health Check Endpoints
+
+| Endpoint | Method | What It Does |
+|----------|--------|-------------|
+| `/webhook/health-check` | GET | Tests real API credentials via the gateway — returns per-API status with `healthy`, `credential_expired`, or `unhealthy` |
+| `/webhook/alert` | POST | Send alerts with `{severity, source, title, message, context}` — routes to Slack |
+
+### Automated Monitoring (Runs Automatically)
+
+| Workflow | Schedule | What It Does |
+|----------|----------|-------------|
+| Health Check (Scheduled) | Every 15 min | Tests 8 key API credentials via real gateway calls, alerts on failures |
+| Credential Rotator | Daily 8 AM | Checks all 31 credentials against 90-day rotation policy, alerts on expired/expiring |
+| Metrics Collector | Every 5 min | Queries n8n execution API, calculates error rates, alerts if >5% |
+| Daily Summary | Daily 8 AM | Fetches 24h execution data from n8n API, reports real stats to Slack |
+| Smoke Tests | Every hour | Pings the API discovery endpoint, alerts if unreachable |
+
+### Before Making API Calls — Self-Check Procedure
+
+1. **Call health check first** if you are unsure whether credentials work:
+   ```bash
+   curl -s https://mmurawala.app.n8n.cloud/webhook/health-check
+   ```
+2. If any API shows `credential_expired`, tell the user:
+   *"The {service} credential has expired. Please re-authenticate in the n8n credentials UI
+   at https://mmurawala.app.n8n.cloud."*
+3. **Do NOT retry failed credential calls** — they will keep failing until the user
+   re-authenticates. Move on to other APIs or inform the user.
+
+### OAuth Token Lifecycle
+
+- n8n handles OAuth2 token refresh automatically via refresh tokens
+- Refresh tokens themselves expire after ~90 days
+- When a refresh token expires, the only fix is manual re-authentication in the n8n UI
+- The Credential Rotator workflow alerts 14 days before expiry
+
+### Active Workflows on n8n Instance
+
+The **Universal API Gateway** (ID: `WQCwEDVb2L6Xkuwd`) is the primary gateway.
+It supports 30+ APIs and handles auth, rate limiting, and error handling.
+Do NOT deploy a separate main-api-gateway — it conflicts with this one.
+
+### Slack Notifications
+
+All monitoring workflows send alerts to the Slack webhook URL configured in the
+n8n environment variable `SLACK_WEBHOOK_URL`. If alerts are not being received,
+the user needs to:
+1. Create a Slack incoming webhook at https://api.slack.com/messaging/webhooks
+2. Set the `SLACK_WEBHOOK_URL` environment variable in n8n settings
+
+---
+
 ## Important Notes
 
 1. **Always discover first.** Call `/webhook/api-discovery` before attempting API calls so
@@ -321,3 +377,9 @@ n8n/
 4. **Check workflow status.** After creating or modifying workflows, verify they are active
    with a GET call.
 5. **Tag your workflows.** Use the tag system to keep workflows organized by category.
+6. **Use the health check.** Before making API calls, call `/webhook/health-check` to verify
+   credentials are valid. Do not guess — check first.
+7. **Never deploy main-api-gateway.json.** The Universal API Gateway already handles all
+   routing. Deploying a second one causes webhook path conflicts.
+8. **Credential issues = tell the user.** If a health check shows `credential_expired`,
+   inform the user immediately. Do not retry — it won't work until re-authenticated.

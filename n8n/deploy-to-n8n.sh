@@ -50,7 +50,6 @@ TAGS=("Infrastructure" "Gateway" "Monitoring" "Testing")
 # Workflows that should be activated after deployment
 # Patterns matched against workflow file paths
 ACTIVATE_PATTERNS=(
-    "gateways/main-api-gateway"
     "gateways/marketing-ads-gateway"
     "gateways/crm-gateway"
     "gateways/analytics-gateway"

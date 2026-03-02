@@ -17,10 +17,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const apis = [\n  { name: 'google_ads', url: 'https://googleads.googleapis.com/$discovery/rest', method: 'GET' },\n  { name: 'hubspot', url: 'https://api.hubspot.com/health', method: 'GET' },\n  { name: 'salesforce', url: 'https://login.salesforce.com/.well-known/openid-configuration', method: 'GET' },\n  { name: 'ga4', url: 'https://analyticsdata.googleapis.com/$discovery/rest', method: 'GET' }\n];\n\nreturn apis.map(api => ({ json: api }));"
+        "jsCode": "// Real credential validation via the API gateway\nconst gatewayUrl = 'https://mmurawala.app.n8n.cloud/webhook/api-gateway';\nconst apiKey = $env.N8N_GATEWAY_API_KEY || 'gw_k7Xm9pR2vT4wQ8nL3jF6hB1dY5sA0uC9eG2iK8oN4xZ';\n\nconst healthChecks = [\n  {\n    name: 'google_ads',\n    category: 'marketing_ads',\n    payload: { client: 'kahuna', api: 'google_ads', action: 'campaigns', params: { customer_id: 'test', limit: 1 } }\n  },\n  {\n    name: 'hubspot',\n    category: 'crm',\n    payload: { client: 'kahuna', api: 'hubspot', action: 'contacts', params: { limit: 1 } }\n  },\n  {\n    name: 'salesforce',\n    category: 'crm',\n    payload: { client: 'kahuna', api: 'salesforce', action: 'accounts', params: { limit: 1 } }\n  },\n  {\n    name: 'ga4',\n    category: 'analytics',\n    payload: { client: 'kahuna', api: 'ga4', action: 'report', params: { date_range: 'last_7_days', metrics: ['sessions'], dimensions: ['date'] } }\n  },\n  {\n    name: 'gmail',\n    category: 'google_suite',\n    payload: { client: 'kahuna', api: 'gmail', action: 'labels', params: {} }\n  },\n  {\n    name: 'google_sheets',\n    category: 'google_suite',\n    payload: { client: 'kahuna', api: 'google_sheets', action: 'sheets', params: {} }\n  },\n  {\n    name: 'google_calendar',\n    category: 'google_suite',\n    payload: { client: 'kahuna', api: 'google_calendar', action: 'calendars', params: {} }\n  },\n  {\n    name: 'slack',\n    category: 'communication',\n    payload: { client: 'kahuna', api: 'slack', action: 'channels', params: { limit: 1 } }\n  }\n];\n\nreturn healthChecks.map(check => ({\n  json: {\n    ...check,\n    gateway_url: gatewayUrl,\n    api_key: apiKey\n  }\n}));"
       },
       "id": "e5f6a7b8-5001-4e01-b005-000000000002",
-      "name": "Check APIs",
+      "name": "Define Health Checks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [480, 300]
@@ -38,14 +38,30 @@
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $json.url }}",
+        "method": "POST",
+        "url": "={{ $json.gateway_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "={{ $json.api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
         "options": {
-          "timeout": 10000
+          "timeout": 15000
         }
       },
       "id": "e5f6a7b8-5001-4e01-b005-000000000004",
-      "name": "Ping API",
+      "name": "Test API Credential",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [940, 400],
@@ -53,7 +69,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const results = $input.all().map(item => ({\n  api: item.json.name || 'unknown',\n  status: item.json.error ? 'unhealthy' : 'healthy',\n  response_time_ms: item.json.response_time || 0,\n  checked_at: new Date().toISOString()\n}));\n\nconst allHealthy = results.every(r => r.status === 'healthy');\n\nreturn [{\n  json: {\n    overall_status: allHealthy ? 'healthy' : 'degraded',\n    health_report: results,\n    checked_at: new Date().toISOString(),\n    total_apis: results.length,\n    healthy_count: results.filter(r => r.status === 'healthy').length,\n    unhealthy_count: results.filter(r => r.status === 'unhealthy').length\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst results = [];\nconst now = new Date().toISOString();\n\nfor (const item of items) {\n  const data = item.json;\n  const isError = data.error || data.status === 'error' || data.statusCode >= 400;\n  const isAuthError = data.error_type === 'auth_error' || data.statusCode === 401 || data.statusCode === 403;\n  \n  let status = 'healthy';\n  let issue = null;\n  \n  if (isAuthError) {\n    status = 'credential_expired';\n    issue = 'OAuth token expired or API key invalid — re-authenticate in n8n credentials UI';\n  } else if (isError) {\n    status = 'unhealthy';\n    issue = data.message || data.error || 'API returned an error';\n  }\n  \n  results.push({\n    api: data.name || 'unknown',\n    category: data.category || 'unknown',\n    status: status,\n    issue: issue,\n    checked_at: now\n  });\n}\n\nconst healthy = results.filter(r => r.status === 'healthy').length;\nconst credentialIssues = results.filter(r => r.status === 'credential_expired');\nconst unhealthy = results.filter(r => r.status === 'unhealthy');\n\nreturn [{\n  json: {\n    overall_status: credentialIssues.length > 0 ? 'credential_issue' : unhealthy.length > 0 ? 'degraded' : 'healthy',\n    health_report: results,\n    checked_at: now,\n    total_apis: results.length,\n    healthy_count: healthy,\n    credential_issues: credentialIssues.length,\n    unhealthy_count: unhealthy.length,\n    credential_issue_details: credentialIssues\n  }\n}];"
       },
       "id": "e5f6a7b8-5001-4e01-b005-000000000005",
       "name": "Aggregate Results",
@@ -89,14 +105,14 @@
       "main": [
         [
           {
-            "node": "Check APIs",
+            "node": "Define Health Checks",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check APIs": {
+    "Define Health Checks": {
       "main": [
         [
           {
@@ -118,14 +134,14 @@
         ],
         [
           {
-            "node": "Ping API",
+            "node": "Test API Credential",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Ping API": {
+    "Test API Credential": {
       "main": [
         [
           {

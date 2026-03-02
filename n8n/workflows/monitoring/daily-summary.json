@@ -21,33 +21,67 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare request parameters for gathering 24-hour summary data\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\n\nreturn [{\n  json: {\n    api_url: `${baseUrl}/api/v1/executions`,\n    period: {\n      start: yesterday.toISOString(),\n      end: now.toISOString()\n    },\n    report_date: now.toISOString().split('T')[0],\n    params: {\n      limit: 1000,\n      startedAfter: yesterday.toISOString(),\n      startedBefore: now.toISOString()\n    }\n  }\n}];"
+        "jsCode": "// Build the n8n API request to fetch the last 24 hours of executions\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\nconst baseUrl = $env.N8N_HOST || 'https://mmurawala.app.n8n.cloud';\n\nreturn [{\n  json: {\n    api_url: `${baseUrl}/api/v1/executions`,\n    period: {\n      start: yesterday.toISOString(),\n      end: now.toISOString()\n    },\n    report_date: now.toISOString().split('T')[0],\n    params: {\n      limit: 1000,\n      startedAfter: yesterday.toISOString(),\n      startedBefore: now.toISOString()\n    }\n  }\n}];"
       },
       "id": "6f7a8b9c-0d1e-4f2a-3b4c-d5e6f7a8b9c0",
-      "name": "Gather Data",
+      "name": "Prepare Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [460, 300]
     },
     {
       "parameters": {
-        "jsCode": "const now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\n\nconst summary = {\n  report_date: now.toISOString().split('T')[0],\n  period: { start: yesterday.toISOString(), end: now.toISOString() },\n  \n  overview: {\n    total_api_calls: 0,\n    successful: 0,\n    failed: 0,\n    avg_response_time: '0ms',\n    uptime: '99.9%'\n  },\n  \n  top_apis: [\n    { api: 'google_ads', calls: 0, error_rate: '0%' },\n    { api: 'hubspot', calls: 0, error_rate: '0%' },\n    { api: 'salesforce', calls: 0, error_rate: '0%' }\n  ],\n  \n  alerts_triggered: 0,\n  credential_status: 'All credentials valid',\n  \n  recommendations: [\n    'Review error rates for any APIs above 5%',\n    'Check credential rotation schedule',\n    'Monitor rate limit usage trends'\n  ]\n};\n\nreturn [{ json: summary }];"
+        "method": "GET",
+        "url": "={{ $json.api_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "={{ $json.params.limit }}"
+            },
+            {
+              "name": "startedAfter",
+              "value": "={{ $json.params.startedAfter }}"
+            },
+            {
+              "name": "startedBefore",
+              "value": "={{ $json.params.startedBefore }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "7a8b9c0d-1e2f-4a3b-4c5d-e6f7a8b9c0d0",
+      "name": "Fetch Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst now = new Date();\nconst yesterday = new Date(now - 24 * 60 * 60 * 1000);\n\n// Parse executions from the API response\nconst executions = input.data || input.results || (Array.isArray(input) ? input : []);\n\nlet totalCalls = executions.length;\nlet successful = 0;\nlet failed = 0;\nlet totalDuration = 0;\nlet durationCount = 0;\nconst byWorkflow = {};\n\nfor (const exec of executions) {\n  if (exec.status === 'success') successful++;\n  else if (exec.status === 'error') failed++;\n  \n  if (exec.stoppedAt && exec.startedAt) {\n    totalDuration += new Date(exec.stoppedAt) - new Date(exec.startedAt);\n    durationCount++;\n  }\n  \n  const wfName = exec.workflowName || exec.workflowId || 'unknown';\n  if (!byWorkflow[wfName]) {\n    byWorkflow[wfName] = { total: 0, success: 0, failed: 0 };\n  }\n  byWorkflow[wfName].total++;\n  if (exec.status === 'success') byWorkflow[wfName].success++;\n  if (exec.status === 'error') byWorkflow[wfName].failed++;\n}\n\nconst avgDuration = durationCount > 0 ? Math.round(totalDuration / durationCount) : 0;\nconst errorRate = totalCalls > 0 ? ((failed / totalCalls) * 100).toFixed(1) : '0.0';\nconst uptime = totalCalls > 0 ? (((totalCalls - failed) / totalCalls) * 100).toFixed(1) : '100.0';\n\n// Top workflows by volume\nconst topWorkflows = Object.entries(byWorkflow)\n  .sort((a, b) => b[1].total - a[1].total)\n  .slice(0, 5)\n  .map(([name, stats]) => ({\n    workflow: name,\n    calls: stats.total,\n    error_rate: stats.total > 0 ? ((stats.failed / stats.total) * 100).toFixed(1) + '%' : '0%'\n  }));\n\n// Workflows with high error rates\nconst problemWorkflows = Object.entries(byWorkflow)\n  .filter(([_, stats]) => stats.total >= 3 && (stats.failed / stats.total) > 0.1)\n  .map(([name, stats]) => `${name}: ${((stats.failed / stats.total) * 100).toFixed(0)}% error rate (${stats.failed}/${stats.total})`)\n;\n\nconst recommendations = [];\nif (parseFloat(errorRate) > 5) recommendations.push(`Overall error rate is ${errorRate}% — investigate failing workflows`);\nif (problemWorkflows.length > 0) recommendations.push(`High error rate workflows: ${problemWorkflows.join(', ')}`);\nif (totalCalls === 0) recommendations.push('No executions recorded — verify workflows are active');\nif (recommendations.length === 0) recommendations.push('All systems operating normally');\n\nconst summary = {\n  report_date: now.toISOString().split('T')[0],\n  period: { start: yesterday.toISOString(), end: now.toISOString() },\n  overview: {\n    total_executions: totalCalls,\n    successful: successful,\n    failed: failed,\n    avg_response_time: `${avgDuration}ms`,\n    uptime: `${uptime}%`,\n    error_rate: `${errorRate}%`\n  },\n  top_workflows: topWorkflows,\n  alerts_triggered: failed,\n  recommendations: recommendations\n};\n\nreturn [{ json: summary }];"
       },
       "id": "7a8b9c0d-1e2f-4a3b-4c5d-e6f7a8b9c0d1",
       "name": "Build Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [900, 300]
     },
     {
       "parameters": {
-        "jsCode": "const summary = $input.first().json;\n\n// Build rich Slack message for daily summary\nconst topApisText = summary.top_apis\n  .map(a => `  - *${a.api}*: ${a.calls} calls (${a.error_rate} errors)`)\n  .join('\\n');\n\nconst recommendationsText = summary.recommendations\n  .map((r, i) => `${i + 1}. ${r}`)\n  .join('\\n');\n\nconst slackPayload = {\n  blocks: [\n    {\n      type: 'header',\n      text: {\n        type: 'plain_text',\n        text: `Daily Operations Summary - ${summary.report_date}`\n      }\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: '*Overview*'\n      }\n    },\n    {\n      type: 'section',\n      fields: [\n        { type: 'mrkdwn', text: `*Total API Calls:*\\n${summary.overview.total_api_calls}` },\n        { type: 'mrkdwn', text: `*Successful:*\\n${summary.overview.successful}` },\n        { type: 'mrkdwn', text: `*Failed:*\\n${summary.overview.failed}` },\n        { type: 'mrkdwn', text: `*Avg Response Time:*\\n${summary.overview.avg_response_time}` },\n        { type: 'mrkdwn', text: `*Uptime:*\\n${summary.overview.uptime}` },\n        { type: 'mrkdwn', text: `*Alerts Triggered:*\\n${summary.alerts_triggered}` }\n      ]\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Top APIs*\\n${topApisText}`\n      }\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Credential Status:* ${summary.credential_status}`\n      }\n    },\n    {\n      type: 'divider'\n    },\n    {\n      type: 'section',\n      text: {\n        type: 'mrkdwn',\n        text: `*Recommendations*\\n${recommendationsText}`\n      }\n    },\n    {\n      type: 'context',\n      elements: [\n        {\n          type: 'mrkdwn',\n          text: `Report period: ${summary.period.start} to ${summary.period.end}`\n        }\n      ]\n    }\n  ]\n};\n\nreturn [{ json: slackPayload }];"
+        "jsCode": "const summary = $input.first().json;\n\nconst topWorkflowsText = summary.top_workflows && summary.top_workflows.length > 0\n  ? summary.top_workflows.map(w => `  - *${w.workflow}*: ${w.calls} executions (${w.error_rate} errors)`).join('\\n')\n  : '  No workflow data available';\n\nconst recommendationsText = summary.recommendations\n  .map((r, i) => `${i + 1}. ${r}`)\n  .join('\\n');\n\nconst statusIcon = parseFloat(summary.overview.error_rate) > 5 ? ':warning:' : ':white_check_mark:';\n\nconst slackPayload = {\n  blocks: [\n    {\n      type: 'header',\n      text: { type: 'plain_text', text: `Daily Operations Summary - ${summary.report_date}` }\n    },\n    { type: 'divider' },\n    {\n      type: 'section',\n      text: { type: 'mrkdwn', text: `${statusIcon} *Overview*` }\n    },\n    {\n      type: 'section',\n      fields: [\n        { type: 'mrkdwn', text: `*Total Executions:*\\n${summary.overview.total_executions}` },\n        { type: 'mrkdwn', text: `*Successful:*\\n${summary.overview.successful}` },\n        { type: 'mrkdwn', text: `*Failed:*\\n${summary.overview.failed}` },\n        { type: 'mrkdwn', text: `*Avg Duration:*\\n${summary.overview.avg_response_time}` },\n        { type: 'mrkdwn', text: `*Uptime:*\\n${summary.overview.uptime}` },\n        { type: 'mrkdwn', text: `*Error Rate:*\\n${summary.overview.error_rate}` }\n      ]\n    },\n    { type: 'divider' },\n    {\n      type: 'section',\n      text: { type: 'mrkdwn', text: `*Top Workflows (by volume)*\\n${topWorkflowsText}` }\n    },\n    { type: 'divider' },\n    {\n      type: 'section',\n      text: { type: 'mrkdwn', text: `*Recommendations*\\n${recommendationsText}` }\n    },\n    {\n      type: 'context',\n      elements: [\n        { type: 'mrkdwn', text: `Report period: ${summary.period.start} to ${summary.period.end}` }\n      ]\n    }\n  ]\n};\n\nreturn [{ json: slackPayload }];"
       },
       "id": "8b9c0d1e-2f3a-4b4c-5d6e-f7a8b9c0d1e2",
       "name": "Format Slack Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [1120, 300]
     },
     {
       "parameters": {
@@ -64,7 +98,8 @@
       "name": "Send to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 300]
+      "position": [1340, 300],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -72,14 +107,25 @@
       "main": [
         [
           {
-            "node": "Gather Data",
+            "node": "Prepare Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gather Data": {
+    "Prepare Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Executions": {
       "main": [
         [
           {

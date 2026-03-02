@@ -2,16 +2,22 @@
   "name": "Monitor: Alert Manager",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
       "id": "1a2b3c4d-5e6f-4a7b-8c9d-e0f1a2b3c4d5",
-      "name": "Execute Workflow Trigger",
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
-      "position": [240, 300]
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "alert-manager-endpoint"
     },
     {
       "parameters": {
-        "jsCode": "const alert = $input.first().json;\n\nconst classification = {\n  id: $execution.id,\n  timestamp: new Date().toISOString(),\n  severity: alert.severity || 'info',\n  source: alert.source || 'unknown',\n  title: alert.title || 'Alert',\n  message: alert.message || '',\n  context: alert.context || {},\n  \n  // Routing rules\n  channels: []\n};\n\nswitch(classification.severity) {\n  case 'critical':\n    classification.channels = ['slack', 'pagerduty', 'email'];\n    break;\n  case 'warning':\n    classification.channels = ['slack'];\n    break;\n  case 'info':\n    classification.channels = ['slack'];\n    break;\n}\n\nreturn [{ json: classification }];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst classification = {\n  id: $execution.id,\n  timestamp: new Date().toISOString(),\n  severity: body.severity || 'info',\n  source: body.source || 'unknown',\n  title: body.title || 'Alert',\n  message: body.message || '',\n  context: body.context || {},\n  channels: []\n};\n\nswitch(classification.severity) {\n  case 'critical':\n    classification.channels = ['slack', 'email'];\n    break;\n  case 'warning':\n    classification.channels = ['slack'];\n    break;\n  case 'info':\n    classification.channels = ['slack'];\n    break;\n  default:\n    classification.channels = ['slack'];\n}\n\nreturn [{ json: classification }];"
       },
       "id": "2b3c4d5e-6f7a-4b8c-9d0e-f1a2b3c4d5e6",
       "name": "Classify Alert",
@@ -25,7 +31,7 @@
         "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/PLACEHOLDER/WEBHOOK/URL' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.severity === 'critical' ? '\\ud83d\\udea8' : $json.severity === 'warning' ? '\\u26a0\\ufe0f' : '\\u2139\\ufe0f' }} {{ $json.title }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.message }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Severity:*\\n{{ $json.severity }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Source:*\\n{{ $json.source }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Alert ID:*\\n{{ $json.id }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Time:*\\n{{ $json.timestamp }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Context:*\\n```{{ JSON.stringify($json.context, null, 2) }}```\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Channels: {{ $json.channels.join(', ') }} | Routed by: Alert Manager\"\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={{ JSON.stringify({ blocks: [ { type: 'header', text: { type: 'plain_text', text: ($json.severity === 'critical' ? 'CRITICAL: ' : $json.severity === 'warning' ? 'WARNING: ' : 'INFO: ') + $json.title } }, { type: 'section', text: { type: 'mrkdwn', text: $json.message } }, { type: 'section', fields: [ { type: 'mrkdwn', text: '*Severity:*\\n' + $json.severity }, { type: 'mrkdwn', text: '*Source:*\\n' + $json.source }, { type: 'mrkdwn', text: '*Alert ID:*\\n' + $json.id }, { type: 'mrkdwn', text: '*Time:*\\n' + $json.timestamp } ] }, { type: 'context', elements: [{ type: 'mrkdwn', text: 'Channels: ' + $json.channels.join(', ') + ' | Routed by: Alert Manager' }] } ] }) }}",
         "options": {
           "timeout": 10000
         }
@@ -34,21 +40,34 @@
       "name": "Send to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300]
+      "position": [680, 300],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const classification = $('Classify Alert').first().json;\n\nreturn [{\n  json: {\n    status: 'alert_dispatched',\n    alert_id: classification.id,\n    severity: classification.severity,\n    title: classification.title,\n    channels_notified: classification.channels,\n    dispatched_at: new Date().toISOString()\n  }\n}];"
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'alert_dispatched', alert_id: $('Classify Alert').first().json.id, severity: $('Classify Alert').first().json.severity, title: $('Classify Alert').first().json.title, channels_notified: $('Classify Alert').first().json.channels, dispatched_at: new Date().toISOString() }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
       },
       "id": "4d5e6f7a-8b9c-4d0e-1f2a-b3c4d5e6f7a8",
-      "name": "Return Confirmation",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [900, 300]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": {
+    "Webhook Trigger": {
       "main": [
         [
           {
@@ -74,7 +93,7 @@
       "main": [
         [
           {
-            "node": "Return Confirmation",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
