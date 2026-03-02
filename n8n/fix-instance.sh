@@ -248,40 +248,45 @@ while read -r wf; do
     continue
   fi
 
-  # GET full workflow, then strip to only PUT-accepted fields
-  # n8n PUT /workflows/{id} rejects extra properties like createdAt, updatedAt, versionId, etc.
-  full_wf=$(api_get "/workflows/$wf_id") || {
-    echo "    [WARN] Failed to fetch full workflow, skipping"
-    continue
-  }
-
-  updated_wf=$(echo "$full_wf" | jq '{name, nodes, connections, settings, staticData, active, tags}')
-
-  # Apply tag
+  # Tag via PUT (active is read-only — must use separate activate/deactivate endpoints)
   if $needs_tag; then
-    updated_wf=$(echo "$updated_wf" | jq --arg tid "$target_tag_id" --arg tname "$target_tag_name" \
-      '.tags = [{"id": $tid, "name": $tname}]')
+    full_wf=$(api_get "/workflows/$wf_id") || {
+      echo "    [WARN] Failed to fetch full workflow, skipping"
+      continue
+    }
+
+    # Strip to PUT-accepted fields only (no active — it's read-only)
+    updated_wf=$(echo "$full_wf" | jq --arg tid "$target_tag_id" --arg tname "$target_tag_name" \
+      '{name, nodes, connections, settings, staticData} + {tags: [{"id": $tid, "name": $tname}]}')
+
+    response=$(api_put "/workflows/$wf_id" "$updated_wf")
+    http_status=$(echo "$response" | tail -1)
+    response_body=$(echo "$response" | sed '$d')
+
+    if [[ "$http_status" -ge 200 && "$http_status" -lt 300 ]]; then
+      echo "    [OK] Tagged: $target_tag_name"
+      ((tagged++)) || true
+    else
+      echo "    [ERROR] Tag failed: HTTP $http_status"
+      echo "    $response_body" | head -1
+    fi
   fi
 
-  # Apply activation state
+  # Activate/deactivate via dedicated endpoints
   if $needs_activate; then
-    updated_wf=$(echo "$updated_wf" | jq '.active = true')
+    if api_post "/workflows/$wf_id/activate" '{}' >/dev/null 2>&1; then
+      echo "    [OK] Activated"
+      ((activated++)) || true
+    else
+      echo "    [WARN] Failed to activate"
+    fi
   elif $needs_deactivate; then
-    updated_wf=$(echo "$updated_wf" | jq '.active = false')
-  fi
-
-  # PUT the updated workflow
-  response=$(api_put "/workflows/$wf_id" "$updated_wf")
-  http_status=$(echo "$response" | tail -1)
-  response_body=$(echo "$response" | sed '$d')
-
-  if [[ "$http_status" -ge 200 && "$http_status" -lt 300 ]]; then
-    $needs_tag && { echo "    [OK] Tagged: $target_tag_name"; ((tagged++)) || true; }
-    $needs_activate && { echo "    [OK] Activated"; ((activated++)) || true; }
-    $needs_deactivate && { echo "    [OK] Deactivated"; ((deactivated++)) || true; }
-  else
-    echo "    [ERROR] HTTP $http_status"
-    echo "    $response_body" | head -1
+    if api_post "/workflows/$wf_id/deactivate" '{}' >/dev/null 2>&1; then
+      echo "    [OK] Deactivated"
+      ((deactivated++)) || true
+    else
+      echo "    [WARN] Failed to deactivate"
+    fi
   fi
 
 done < <(echo "$all_workflows" | jq -c '.[]')

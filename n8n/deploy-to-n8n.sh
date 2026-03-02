@@ -363,14 +363,8 @@ deploy_workflows() {
         fi
       fi
 
-      # Activate the workflow — strip to PUT-accepted fields
-      local activate_body
-      activate_body=$(api_get "/workflows/$new_id" | jq '{name, nodes, connections, settings, staticData, tags, active: true}')
-      local activate_response
-      activate_response=$(api_put_verbose "/workflows/$new_id" "$activate_body")
-      local act_status="${activate_response%%|*}"
-
-      if [[ "$act_status" -ge 200 && "$act_status" -lt 300 ]]; then
+      # Activate the workflow via dedicated endpoint (active is read-only on PUT)
+      if api_post "/workflows/$new_id/activate" '{}' >/dev/null 2>&1; then
         echo "[OK]   Activated workflow"
       else
         echo "[WARN]   Failed to activate workflow"
